@@ -1,7 +1,0 @@
-Highlights for: An Atlas of PINN Failures: The Zugzwang Thesis
-
-* PINN failure under stiffness involves concurrent, independent structural limits.
-* Failed models converge to sharp minima, four orders above successful ones.
-* Network structural limits account for 67% of outcome variance on Burgers.
-* Pointwise L2 accuracy obscures massive physical mass conservation violations.
-* No single mitigation resolves the multi-modal Zugzwang condition.

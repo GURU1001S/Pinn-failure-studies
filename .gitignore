@@ -32,7 +32,30 @@ __pycache__/
 .idea/
 .DS_Store
 Thumbs.db
+# Helper and QA scripts (Root)
+aggregate*.py
+aggregated_data*.txt
+audit_script.py
+check_refs.py
+convert_png_to_pdf.py
+dat.py
+generate_table.py
+qa_consistency.py
+replot_*.py
+search_json.py
+graphical_abstract_concept.txt
+credit_authorship.txt
+highlights.txt
 
+# Helper scripts (Experiments folder)
+experiments/aggregator.py
+experiments/fix_plots.py
+experiments/replot_*.py
+experiments/temp_*.py
+experiments/test_*.py
+experiments/grid_test.py
+experiments/run_step*.py
+experiments/run_all.py
 # External repositories and downloaded libraries
 PINNs/
 deepxde/
@@ -42,6 +65,13 @@ jaxpi/
 submission/
 insights/
 datasets/
+
+# Exclude Manuscript Source Code
+sections/
+main.tex
+references.bib
+*.tex
+*.bib
 
 # Scratch and temporary developer scripts
 scratch*.py
