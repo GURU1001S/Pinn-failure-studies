@@ -32,3 +32,23 @@ __pycache__/
 .idea/
 .DS_Store
 Thumbs.db
+
+# External repositories and downloaded libraries
+PINNs/
+deepxde/
+jaxpi/
+
+# Exclude submission-specific and private notes
+submission/
+insights/
+datasets/
+
+# Scratch and temporary developer scripts
+scratch*.py
+
+# Huge binary or JSON checkpoint files that break GitHub limits
+*checkpoint*.json
+**/*checkpoint*.json
+
+# Generated paper PDF (source only in repo)
+main.pdf

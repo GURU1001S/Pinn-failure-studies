@@ -1,5 +1,0 @@
-1. Stiff PINN failures are structural traps, not hyperparameter tuning artifacts.
-2. NTK condition numbers at initialization strictly predict spectral failure boundaries.
-3. High training loss drops mask catastrophic silent failures in stiff PDEs.
-4. Gradient pathologies are late-stage symptoms of fundamental spectral bias.
-5. Scaling width or points cannot rescue PINNs from the discontinuous phase wall.
