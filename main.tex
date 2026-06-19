@@ -1,0 +1,82 @@
+\documentclass[preprint, review, 12pt]{elsarticle}
+
+\usepackage{cmap}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+\journal{The Phase Space of Failure: Structural Limits and Coupled Degeneracies in Physics-Informed Neural Networks}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{subcaption}
+\usepackage{xcolor}
+\usepackage{siunitx}
+\usepackage{pgfplots}
+\usepackage{tikz}
+\usepackage{algorithm2e}
+\usepackage{natbib}
+\usepackage[margin=2.5cm]{geometry}
+
+\bibliographystyle{elsarticle-num-names}
+
+\newcommand{\Ltwo}{L^2}
+\newcommand{\Ltwonorm}[1]{\|#1\|_{L^2}}
+\newcommand{\etasq}{\eta^2}
+\newcommand{\kNTK}{\kappa_{\mathrm{NTK}}}
+\newcommand{\betaAdv}{\beta}
+\newcommand{\nuBurg}{\nu}
+\newcommand{\Ncol}{N_{\mathrm{col}}}
+\newcommand{\PINN}{\textsc{pinn}}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{An Atlas of PINN Failures: The Zugzwang Thesis}
+
+\author[1]{Guru Prasaath S\corref{cor1}}
+\ead{guru731978@gmail.com}
+
+\address[1]{PSG Institute of Technology and Applied Research}
+
+\cortext[cor1]{Corresponding author}
+
+\input{sections/abstract.tex}
+
+\begin{keyword}
+Physics-Informed Neural Networks \sep 
+Spectral Bias \sep 
+Gradient Pathology \sep 
+Neural Tangent Kernel \sep 
+Variance Decomposition (ANOVA) \sep 
+Eta-squared \sep 
+Conservation Laws \sep 
+Phase Diagram
+\end{keyword}
+
+\end{frontmatter}
+
+\input{sections/introduction.tex}
+\input{sections/methods.tex}
+\input{sections/part1_spectral_barrier.tex}
+\input{sections/part2_optimization_trap.tex}
+\input{sections/part3_data_illusions.tex}
+\input{sections/part4_mitigations.tex}
+\input{sections/part5_phase_space.tex}
+\input{sections/part6_conservation.tex}
+\input{sections/part7_variance_decomp.tex}
+\input{sections/conclusion.tex}
+
+\section*{Data and Code Availability}
+To ensure full computational reproducibility of all results, figures, and statistical analyses presented in this manuscript, a complete reproducibility package has been provided. The source code, exact library versions (\texttt{environment.yml} and \texttt{requirements.txt}), training scripts, and raw JSON logs containing all measured metrics are available in the public GitHub repository at \url{https://github.com/GURU1001S/Pinn-failure-studies}. Detailed supplementary information, including the exact random seed values used for initialization, is provided in \ref{app:seeds}.
+
+\input{sections/appendix.tex}
+
+\bibliography{references}
+
+\end{document}

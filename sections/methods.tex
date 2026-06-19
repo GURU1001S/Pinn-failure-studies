@@ -1,0 +1,176 @@
+\section{Methods}\label{sec:methods}
+
+To systematically investigate the failure modes of \PINN{}s across varying regimes of stiffness, we establish a standardized experimental protocol. This section details the partial differential equations (PDEs) under consideration, the baseline neural network architecture, the optimization strategy, and the rigorous diagnostic metrics employed to evaluate network performance and stability.
+
+\subsection{PDE Problem Suite}
+
+Our empirical evaluation utilizes a suite of three canonical PDEs, selected to isolate distinct challenges related to advection, nonlinear viscosity, and high-frequency spatial variation. 
+
+The first problem is the 1D linear advection equation, which serves as a fundamental benchmark for evaluating a network's capacity to transport information without artificial dissipation. The governing equation, domain, and initial and boundary conditions are given by:
+\begin{equation}
+\begin{aligned}
+    & u_t + \betaAdv u_x = 0, \quad x \in [0, 2\pi), \ t \in [0, 2], \\
+    & u(x,0) = \sin(x), \\
+    & u(0,t) = u(2\pi,t),
+\end{aligned}
+\end{equation}
+where $\betaAdv$ represents the advection coefficient. This problem admits an exact analytical solution, $u(x,t) = \sin(x - \betaAdv t)$.
+
+The second problem is the 1D viscous Burgers' equation, a prototypical nonlinear PDE that develops sharp gradients and shock-like features depending on the magnitude of the kinematic viscosity $\nuBurg$. The system is defined as:
+\begin{equation}
+\begin{aligned}
+    & u_t + u u_x = \nuBurg u_{xx}, \quad x \in [-1, 1], \ t \in [0, 1], \\
+    & u(x,0) = -\sin(\pi x), \\
+    & u(-1,t) = u(1,t) = 0.
+\end{aligned}
+\end{equation}
+
+The third problem is the 2D Helmholtz equation, which is frequently used to assess spectral bias and the resolution of high-frequency spatial features. The equation and its corresponding Dirichlet boundary conditions on a square domain are:
+\begin{equation}
+\begin{aligned}
+    & \Delta u + k^2 u = f(x,y), \quad (x,y) \in [-1, 1]^2, \\
+    & u(x,y) = 0 \quad \text{on} \ \partial\Omega,
+\end{aligned}
+\end{equation}
+where $k$ is the wavenumber. The forcing term $f(x,y)$ is analytically derived to yield the manufactured exact solution $u(x,y) = \sin(\pi x)\sin(\pi y)$.
+
+\subsection{Standard PINN Architecture}
+
+Across all experiments, unless explicitly stated otherwise, the neural network approximator $u_\theta(x,t)$ is parameterized as a standard Multi-Layer Perceptron (MLP) comprising $L$ hidden layers with $N$ neurons per layer. The default activation function is the hyperbolic tangent ($\tanh$), applied element-wise to all hidden layers. The network weights are initialized using the standard Xavier uniform initialization scheme to ensure variance preservation at the onset of training.
+
+The network is optimized to minimize a composite physics-informed loss function, $\mathcal{L}(\theta)$, which aggregates the residuals of the PDE, the initial conditions (IC), and the boundary conditions (BC). The total loss is defined as:
+\begin{equation}
+    \mathcal{L}(\theta) = \mathcal{L}_{pde}(\theta) + \lambda_{ic} \mathcal{L}_{ic}(\theta) + \lambda_{bc} \mathcal{L}_{bc}(\theta),
+\end{equation}
+where $\lambda_{ic}$ and $\lambda_{bc}$ are scalar penalty weights that balance the contributions of the respective loss components. By default, the architecture consists of $L=4$ hidden layers and $N=64$ neurons per layer. The penalty weights are heavily biased toward the data constraints to enforce boundary adherence, set to $\lambda_{ic}=100$ and $\lambda_{bc}=10$, with the PDE residual weight fixed at $1$.
+
+The network parameters $\theta$ are updated using the Adam optimizer. To facilitate smooth convergence, the learning rate follows a Cosine Annealing schedule, decaying from an initial learning rate of $1\times 10^{-3}$ to a minimum learning rate of $lr_{\min} = 1\times 10^{-5}$ over the total number of training epochs.
+
+\subsection{Evaluation Protocol}
+
+To rigorously assess the predictive accuracy of the trained models, we report the relative $\Ltwo$ error. For a predicted solution vector $\mathbf{u}_{\text{pred}}$ and a corresponding reference solution vector $\mathbf{u}_{\text{ref}}$ evaluated over a discrete grid, the metric is defined as:
+\begin{equation}
+    \text{Relative } \Ltwo \text{ Error} = \frac{\Ltwonorm{\mathbf{u}_{\text{pred}} - \mathbf{u}_{\text{ref}}}}{\Ltwonorm{\mathbf{u}_{\text{ref}}}}.
+\end{equation}
+A PINN run is classified as \textbf{successful} if the final relative L2 error satisfies $\Ltwo{} < 0.10$, and as \textbf{failed} otherwise. This threshold is applied consistently across all experiments unless explicitly stated (Experiment~22.2 uses separate RECOVERED/PARTIAL/FAILED thresholds of 0.10 and 0.40 respectively, as defined in Section~\ref{sec:exp22two}).
+Reference solutions vary depending on the PDE. For the linear advection equation, the exact analytical solution is utilized. For the viscous Burgers' equation, the reference solution is generated using a high-resolution implicit Crank-Nicolson finite difference scheme \cite{Crank1947}. For the 2D Helmholtz equation, the manufactured solution provides the exact ground truth. All models are evaluated on a uniform Cartesian grid of resolution $128 \times 64$ (spatial $\times$ temporal points). 
+
+To ensure strict reproducibility and mitigate the effects of stochastic optimization variations, all random seeds governing initialization and collocation point sampling are fixed for individual experiments. Where statistical significance is required, multi-seed experiments are conducted, and the specific number of independent trials ($N_{\text{seeds}}$) is explicitly stated alongside the corresponding results.
+
+\subsection{Diagnostic Metrics}
+
+To diagnose specific failure modes during optimization, we continuously track a set of geometric and spectral metrics throughout training. 
+
+To quantify gradient pathologies, we compute the gradient magnitude ratio between the PDE residual loss and the boundary condition loss:
+\begin{equation}
+    \text{Gradient Ratio} = \frac{\Ltwonorm{\nabla_\theta \mathcal{L}_{pde}}}{\Ltwonorm{\nabla_\theta \mathcal{L}_{bc}}}.
+\end{equation}
+Additionally, the directional alignment of competing gradients is measured using the gradient conflict cosine, which identifies destructive interference between the PDE and initial condition losses:
+\begin{equation}
+    \cos(\theta_{\text{conflict}}) = \frac{\nabla_\theta \mathcal{L}_{pde} \cdot \nabla_\theta \mathcal{L}_{ic}}{\Ltwonorm{\nabla_\theta \mathcal{L}_{pde}} \Ltwonorm{\nabla_\theta \mathcal{L}_{ic}}}.
+\end{equation}
+
+To assess the conditioning of the optimization landscape, we compute the empirical Neural Tangent Kernel (NTK) matrix $\mathbf{K}$ over the collocation points. The NTK condition number, $\kNTK$, characterizes the disparity in learning rates across different eigen-directions:
+\begin{equation}
+    \kNTK = \frac{\lambda_{\max}(\mathbf{K})}{\lambda_{\min}(\mathbf{K})},
+\end{equation}
+where $\lambda_{\max}$ and $\lambda_{\min}$ denote the maximum and minimum eigenvalues of $\mathbf{K}$, respectively.
+
+Finally, to measure the network's susceptibility to spectral bias, we decompose the spatial error in the frequency domain. The spectral error for a specific frequency band $k$ is calculated by applying a frequency mask ($mask_k$) to the Fourier transform of the absolute error field $e(x,t)$:
+\begin{equation}
+    \text{Spectral Error}_k = \frac{\Ltwonorm{\text{IFFT}(\text{FFT}(e) \odot mask_k)}}{\Ltwonorm{\mathbf{u}_{\text{exact}}}},
+\end{equation}
+where $\odot$ denotes element-wise multiplication, and IFFT and FFT represent the inverse and forward Fast Fourier Transforms, respectively.
+
+\subsection{Variance Decomposition Methodology}
+
+To systematically isolate the proportion of outcome variance attributable to specific architectural or hyperparameter choices versus underlying PDE structural factors, we utilize one-way Analysis of Variance (ANOVA). The effect size is quantified using the $\etasq$ statistic, defined as:
+\begin{equation}
+    \etasq = \frac{SS_{\text{between}}}{SS_{\text{total}}},
+\end{equation}
+where $SS_{\text{between}}$ is the sum of squares between groups (representing the variance explained by the factor under consideration) and $SS_{\text{total}}$ is the total sum of squares. This metric explicitly measures the proportion of the total variance in the $\Ltwo$ error that can be attributed to a specific independent variable. We adhere to standard benchmarks for interpreting the magnitude of these effect sizes, as established by Cohen \cite{Cohen1988}.
+
+\subsection{Seed Protocol and Reproducibility}
+
+All experiments fix the random seed prior to model initialization and data sampling. Multi-seed experiments (Exps~1, 5, 8, 9, 11, 13, 14, 27) use $N$ seeds as documented per experiment in Table~\ref{tab:app_budgets} (Appendix). Single-seed experiments (Exps~2--4, 6--7, 10, 16, 25) are run with $\text{seed}=42$ unless otherwise noted. Phase-space experiments (Exp~25) use $\text{seed}=42$ for all grid configurations; the seed-sensitivity of boundary locations near transition regions is acknowledged as a limitation (see Section~7.3).
+
+\subsection{Statistical Analysis}
+
+Effect sizes are reported as $\etasq$ (eta-squared) following \cite{Cohen1988}, where $\etasq > 0.14$ is classified as a large effect and $\etasq > 0.06$ as medium. Pearson correlation coefficients are supplemented with two-tailed $p$-values computed via permutation bootstrap ($n=1000$ permutations) where stated. Confidence intervals for Hessian eigenvalue estimates are reported as $\text{mean} \pm 2\sigma$ over $n=5$ independent power-iteration runs with random eigenvector initialization. Curve fits for phase boundaries report $R^2$ with explicit sample size $n \le 7$ and should not be extrapolated beyond the tested parameter range.
+
+\subsection{Diagnostic Metric Validation}
+
+The corrected spectral error metric (Exp.~18) uses band-filtered $\Ltwo$ normalized by the global $\|\mathbf{u}_{\text{exact}}\|_2$ rather than per-frequency amplitude, to avoid division-by-near-zero artifacts at frequencies where the exact solution has negligible energy. The gradient ratio and conflict cosine metrics are computed on fresh collocation samples drawn at evaluation time, independent of the training samples, to avoid evaluating on memorized data.
+
+\subsection{Experimental Configuration Summary}
+
+For clarity and reproducibility, the default hyperparameter configuration employed across all baseline experiments is summarized in Table \ref{tab:default_config}. Variations from these defaults are explicitly noted in the specific experimental sections.
+
+\begin{table}[htpb]
+\centering
+\caption{Default experimental configuration.}
+\label{tab:default_config}
+\begin{tabular}{@{}llc@{}}
+\toprule
+Parameter & Symbol & Default Value \\
+\midrule
+Hidden layers & $L$ & 4 \\
+Neurons per layer & $N$ & 64 \\
+Activation function & -- & $\tanh$ \\
+Initialization scheme & -- & Xavier Uniform \\
+Optimizer & -- & Adam \\
+Learning Rate (initial) & $lr$ & $1 \times 10^{-3}$ \\
+Learning Rate (final) & $lr_{\min}$ & $1 \times 10^{-5}$ \\
+IC weight & $\lambda_{ic}$ & 100 \\
+BC weight & $\lambda_{bc}$ & 10 \\
+Collocation points (default) & $\Ncol$ & $1000$ \\
+Training epochs (default) & $N_{\text{epochs}}$ & $40,000$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table*}[htbp]
+\centering
+\small
+\caption{Summary of all 27 experiments, their PDEs, sections, and primary outcomes.}
+\label{tab:experiments_summary}
+\begin{tabular}{@{}llp{6.0cm}p{3.2cm}ll@{}}
+\toprule
+Exp & PDE & Primary Question & Key Metric & Section & Page \\
+\midrule
+Exp 1 & Advection & Spectral bias phase transition & $\Ltwo$ vs $\betaAdv$ & \S 3.1 & \pageref{sec:exp1} \\
+Exp 2 & Advection & Activation function mitigation & $\Ltwo$ per activation & \S 3.2 & \pageref{sec:exp2} \\
+Exp 3 & Advection/Helmholtz & NTK condition number & $\kNTK$ range & \S 3.3 & \pageref{sec:exp3} \\
+Exp 4 & Advection & Gradient magnitude pathology & Gradient ratio & \S 4.1 & \pageref{sec:exp4} \\
+Exp 5 & Advection & Loss landscape sharpness & $\lambda_{\max}$ & \S 4.3 & \pageref{sec:exp5} \\
+Exp 6 & Advection & Gradient conflict dynamics & Cosine angle & \S 4.2 & \pageref{sec:exp6} \\
+Exp 7 & Helmholtz & Sampling strategy comparison & $\Ltwo$ variance & \S 5.1 & \pageref{sec:exp7} \\
+Exp 8 & Helmholtz & Collocation starvation cliff & $\Ltwo$ vs $N$ & \S 5.2 & \pageref{sec:exp8} \\
+Exp 9 & Helmholtz & Boundary/interior ratio & $\Ltwo$ vs BC fraction & \S 5.3 & \pageref{sec:exp9} \\
+Exp 10 & Heat & Temporal stiffness ($\alpha$ sweep) & Early stopping epoch & \S 5.4 & \pageref{sec:exp10} \\
+Exp 11 & Allen-Cahn & Multi-scale interface & Interface/bulk ratio & \S 5.4 & \pageref{sec:exp11} \\
+Exp 12 & Heat & Long-time integration & $\Ltwo$ vs time & \S 5.5 & \pageref{sec:exp12} \\
+Exp 13 & Advection & Initialization strategy & $\Ltwo$ floor & \S 4.4 & \pageref{sec:exp13} \\
+Exp 14 & Advection & Optimizer comparison (equal budget) & $\Ltwo$ per optimizer & \S 4.4 & \pageref{sec:exp14} \\
+Exp 15 & Advection & Learning rate phase diagram & LR $\times$ Epochs grid & \S 4.4 & \pageref{sec:exp15} \\
+Exp 16 & Advection & Causal training intervention & $\Ltwo$ std vs causal & \S 6.1 & \pageref{sec:exp16} \\
+Exp 17 & Advection & Temporal extrapolation horizon & $R^*$ ratio & \S 5.6 & \pageref{sec:exp17} \\
+Exp 18 & Advection & Compound failure correlation & Pearson $r$ & \S 6.2 & \pageref{sec:exp18} \\
+Exp 19 & Burgers & Failure mode phase diagram ($\nu$) & Mode classification & \S 6.3 & \pageref{sec:exp19} \\
+Exp 20 & \multicolumn{4}{l}{[OMITTED\textsuperscript{\textdagger} --- reserved for future work]} & --- \\
+Exp 21 & \multicolumn{4}{l}{[OMITTED\textsuperscript{\textdagger} --- reserved for future work]} & --- \\
+Exp 22 & \multicolumn{4}{l}{[OMITTED] Dimensionality scaling study (superseded by Experiment~22.2 design)} & --- \\
+Exp 22.2\textsuperscript{\ddag} & Multi-PDE & Recovery boundary matrix & Recovery rate & \S 6.4 & \pageref{sec:exp22two} \\
+Exp 23 & \multicolumn{4}{l}{[OMITTED\textsuperscript{\textdagger} --- reserved for future work]} & --- \\
+Exp 24 & Advection & Silent conservation leakage & Mass integral & \S 8.1 & \pageref{sec:exp24} \\
+Exp 25 & Advection/Burgers & 2D failure phase space & Discontinuous phase wall & \S 7.1 & \pageref{sec:exp25} \\
+Exp 26 & Multi-PDE & Conservation law audit & $C_1$--$C_4$ violations & \S 8.1 & \pageref{sec:exp26} \\
+Exp 27 & Advection/Burgers & Structural vs HP variance & $\etasq$ & \S 9.1 & \pageref{sec:exp27} \\
+\bottomrule
+\end{tabular}
+\begin{flushleft}
+\textsuperscript{\textdagger}Experiments 20, 21, 23 are reserved for future work and are not reported in this submission.\\
+\textsuperscript{\ddag}Experiment 22.2 represents a redesigned version of the originally planned Experiment 22 (multi-dimensional advection sweep). The decimal notation indicates derivation from, rather than subdivision of, the parent experiment number. No Experiment 22.1 exists; the .2 suffix reflects the second design iteration of this experimental slot.
+\end{flushleft}
+\end{table*}
+
