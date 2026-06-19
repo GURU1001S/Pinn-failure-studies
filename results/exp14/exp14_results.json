@@ -1,0 +1,149 @@
+{
+  "experiment": "Optimizer-Induced Failure Study",
+  "version": "v2-journal-ready",
+  "config": {
+    "n_hidden": 4,
+    "n_neurons": 64,
+    "n_epochs_adam": 40000,
+    "n_lbfgs_steps": 2000,
+    "lbfgs_max_iter": 20,
+    "lbfgs_grad_evals": 40000,
+    "lbfgs_steps_hybrid": 1000,
+    "n_seeds": 3
+  },
+  "budget_note": "All optimizers receive equal gradient evaluation budget. Adam: 40000 steps. L-BFGS: 2000 steps \u00d7 20 closure calls = 40000 grad evals. v1 gave L-BFGS 2000 steps (2000 grad evals) vs 40000 for Adam \u2014 an 20\u00d7 budget disadvantage that confounded failure attribution.",
+  "per_optimizer": {
+    "Adam(lr=1e-03)": {
+      "l2_per_seed": [
+        0.09046607284476824,
+        0.09048697741704093,
+        0.09043249341163004
+      ],
+      "mean_l2": 0.0904618478911464,
+      "std_l2": 2.244273284359406e-05,
+      "mean_stagnation": 0.9998822352451463,
+      "mean_oscillation": 0.025189189660158758,
+      "failure_mode": "success"
+    },
+    "Adam(lr=1e-04)": {
+      "l2_per_seed": [
+        0.09051243276272641,
+        0.09046260258682419,
+        0.09034544738273323
+      ],
+      "mean_l2": 0.09044016091076128,
+      "std_l2": 6.999405165798752e-05,
+      "mean_stagnation": 0.9998056905687419,
+      "mean_oscillation": 0.011432459410361877,
+      "failure_mode": "success"
+    },
+    "Adam(lr=1e-02)": {
+      "l2_per_seed": [
+        0.09075776434172401,
+        0.0904595632423617,
+        0.09052113365938441
+      ],
+      "mean_l2": 0.0905794870811567,
+      "std_l2": 0.0001285426395912375,
+      "mean_stagnation": 0.9999027468691448,
+      "mean_oscillation": 0.1329042332959546,
+      "failure_mode": "success"
+    },
+    "L-BFGS": {
+      "l2_per_seed": [
+        0.4397579226753478,
+        0.4312448431059635,
+        0.44317378978165917
+      ],
+      "mean_l2": 0.4380588518543235,
+      "std_l2": 0.0050159793619352026,
+      "mean_stagnation": NaN,
+      "mean_oscillation": 0.017568027641317884,
+      "failure_mode": "success"
+    },
+    "RMSprop": {
+      "l2_per_seed": [
+        0.09056501337293454,
+        0.09039527266846402,
+        0.09037922102099283
+      ],
+      "mean_l2": 0.09044650235413047,
+      "std_l2": 8.405577525318398e-05,
+      "mean_stagnation": 0.9996958929528447,
+      "mean_oscillation": 0.057287977723272356,
+      "failure_mode": "success"
+    },
+    "SGD+Momentum": {
+      "l2_per_seed": [
+        0.08867512694494663,
+        0.09762157864697134,
+        0.11447271200361532
+      ],
+      "mean_l2": 0.10025647253184443,
+      "std_l2": 0.010695352512601529,
+      "mean_stagnation": 0.994770092426149,
+      "mean_oscillation": 0.004523574898059125,
+      "failure_mode": "success"
+    },
+    "Adam\u2192LBFGS@10000": {
+      "l2_per_seed": [
+        0.10932512674634606,
+        0.09020651504141919,
+        0.0913466886151425
+      ],
+      "mean_l2": 0.09695944346763592,
+      "std_l2": 0.008756239343332388,
+      "mean_stagnation": 0.9970564722939134,
+      "mean_oscillation": 0.02121490330467644,
+      "failure_mode": "success"
+    },
+    "Adam\u2192LBFGS@20000": {
+      "l2_per_seed": [
+        0.0903907171461456,
+        0.09045931401167656,
+        0.09045118473380677
+      ],
+      "mean_l2": 0.09043373863054298,
+      "std_l2": 3.0601278616926785e-05,
+      "mean_stagnation": 0.9995273583917843,
+      "mean_oscillation": 0.013063899796579957,
+      "failure_mode": "success"
+    },
+    "Adam\u2192LBFGS@30000": {
+      "l2_per_seed": [
+        0.09025719884537,
+        0.09051762608379492,
+        0.09041906458353595
+      ],
+      "mean_l2": 0.09039796317090028,
+      "std_l2": 0.00010736088313043922,
+      "mean_stagnation": 0.9997960730748893,
+      "mean_oscillation": 0.015380732829642967,
+      "failure_mode": "success"
+    }
+  },
+  "hybrid_switch_analysis": {
+    "10000": {
+      "mean_l2": 0.09695944346763592,
+      "std_l2": 0.008756239343332388
+    },
+    "20000": {
+      "mean_l2": 0.09043373863054298,
+      "std_l2": 3.0601278616926785e-05
+    },
+    "30000": {
+      "mean_l2": 0.09039796317090028,
+      "std_l2": 0.00010736088313043922
+    }
+  },
+  "optimal_switch_point": 30000,
+  "failure_mode_definitions": {
+    "success": "mean_l2 < 0.5, stagnation > 0.05, osc < 0.3",
+    "flat_region_stagnation": "stagnation < 0.05 (loss barely improved)",
+    "ill_conditioned_hessian": "oscillation > 0.3 (chaotic loss tail)",
+    "divergence": "mean_l2 > 5.0 or non-finite",
+    "insufficient_convergence": "mean_l2 > 0.5 but < 5.0"
+  },
+  "stagnation_metric_note": "v1 stagnation = late_mean / early_mean. This gives inf when early \u2248 0 and ~1 for well-converged models (falsely implying stagnation). v2 stagnation = (early - late) / early: bounded, monotone \u2014 0=no progress, 1=full convergence.",
+  "hybrid_budget_note": "v1 gave shrinking L-BFGS budget as switch point increased: switch=10k \u2192 2000 steps, switch=30k \u2192 1000 steps. This confounded 'later switch is worse' with 'later switch gets less L-BFGS compute'. v2 gives all hybrid configs the same 1000 L-BFGS steps regardless of switch point."
+}

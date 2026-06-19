@@ -1,0 +1,58 @@
+{
+  "experiment": "Dimensionality Cross-Validation",
+  "version": "v1",
+  "hypothesis": "Spectral bias failure worsens with spatial dimensionality. Higher-dimensional domains amplify the frequency coverage challenge: the network must represent product-of-sines across d axes, each shifted by \u03b2\u00b7t, while the NTK kernel remains biased toward low-frequency modes.",
+  "config": {
+    "beta": 30,
+    "seed": 42,
+    "n_hidden": 4,
+    "n_neurons": 64,
+    "activation": "tanh",
+    "n_epochs": 30000,
+    "lr": 0.001,
+    "t_max": 1.0,
+    "failure_threshold": 0.1
+  },
+  "collocation_counts": {
+    "1D": {
+      "n_pde": 2000,
+      "n_ic": 500,
+      "n_bc": 200
+    },
+    "2D": {
+      "n_pde": 10000,
+      "n_ic": 2000,
+      "n_bc": 500
+    },
+    "3D": {
+      "n_pde": 50000,
+      "n_ic": 10000,
+      "n_bc": 1000
+    }
+  },
+  "per_dimension": {
+    "1D": {
+      "l2_error": 0.7104548095313874,
+      "failed": true,
+      "elapsed_s": 218.6253526210785,
+      "peak_mem_mb": 24.28857421875,
+      "final_loss": 0.1884297877550125
+    },
+    "2D": {
+      "l2_error": 0.6606258575447754,
+      "failed": true,
+      "elapsed_s": 246.71756219863892,
+      "peak_mem_mb": 56.1396484375,
+      "final_loss": 0.056652724742889404
+    },
+    "3D": {
+      "l2_error": 0.9354044141369737,
+      "failed": true,
+      "elapsed_s": 483.79207015037537,
+      "peak_mem_mb": 212.7216796875,
+      "final_loss": 0.0370040163397789
+    }
+  },
+  "dimensionality_cliff_note": "If L2 error increases monotonically from 1D \u2192 2D \u2192 3D while all other hyperparameters are held constant, this confirms the Curse of Spectral Dimensionality: the product structure of the exact solution requires spectral coverage that scales exponentially with dimension, while the fixed-width network's representational capacity is constant.",
+  "total_elapsed_s": 950.0580503940582
+}

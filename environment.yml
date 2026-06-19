@@ -1,0 +1,10 @@
+name: pinn_zugzwang
+channels:
+  - pytorch
+  - defaults
+dependencies:
+  - python=3.10
+  - pytorch
+  - numpy
+  - scipy
+  - matplotlib

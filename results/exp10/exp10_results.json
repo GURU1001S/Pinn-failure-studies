@@ -1,0 +1,83 @@
+{
+  "experiment": "Stiffness Failure (Heat Equation)",
+  "version": "v2-journal-ready",
+  "config": {
+    "alpha_values": [
+      1.0,
+      0.1,
+      0.01,
+      0.001,
+      0.0001
+    ],
+    "n_hidden": 4,
+    "n_neurons": 64,
+    "n_epochs_budget": 100000,
+    "lr": 0.001,
+    "lr_min": 1e-06,
+    "l2_converged_threshold": 0.05,
+    "early_stop_window": 5000,
+    "early_stop_improvement": 0.001,
+    "seed": 42
+  },
+  "per_alpha": {
+    "1.0": {
+      "l2_error": 0.001564542614596259,
+      "converged": true,
+      "total_epochs": 100000,
+      "stopping_reason": "budget_exhausted",
+      "premature_stop": false,
+      "alpha_lambda_max": 158394.13060057742,
+      "spectral_ratio": 16049.014111168708,
+      "fourier_number": 3.9601
+    },
+    "0.1": {
+      "l2_error": 0.0002903872546048967,
+      "converged": true,
+      "total_epochs": 100000,
+      "stopping_reason": "budget_exhausted",
+      "premature_stop": false,
+      "alpha_lambda_max": 15839.413060057743,
+      "spectral_ratio": 16049.014111168708,
+      "fourier_number": 0.39601000000000003
+    },
+    "0.01": {
+      "l2_error": 0.0002776304441108817,
+      "converged": true,
+      "total_epochs": 100000,
+      "stopping_reason": "budget_exhausted",
+      "premature_stop": false,
+      "alpha_lambda_max": 1583.9413060057743,
+      "spectral_ratio": 16049.014111168708,
+      "fourier_number": 0.03960100000000001
+    },
+    "0.001": {
+      "l2_error": 0.00020867755899814939,
+      "converged": true,
+      "total_epochs": 100000,
+      "stopping_reason": "budget_exhausted",
+      "premature_stop": false,
+      "alpha_lambda_max": 158.39413060057743,
+      "spectral_ratio": 16049.014111168708,
+      "fourier_number": 0.0039601
+    },
+    "0.0001": {
+      "l2_error": 0.00021584168954126231,
+      "converged": true,
+      "total_epochs": 100000,
+      "stopping_reason": "budget_exhausted",
+      "premature_stop": false,
+      "alpha_lambda_max": 15.839413060057742,
+      "spectral_ratio": 16049.014111168708,
+      "fourier_number": 0.00039601
+    }
+  },
+  "stiffness_note": "v1 computed stiffness = \u03bb_max(\u03b1\u00b7L) / \u03bb_min(\u03b1\u00b7L) = \u03bb_max(L) / \u03bb_min(L) (\u03b1 cancels). All 5 \u03b1 values got identical stiffness \u2248 16049, making stiffness_vs_l2.png a meaningless vertical line. v2 uses \u03b1\u00b7\u03bb_max(L) \u2014 the largest eigenvalue magnitude of the physical operator. This scales linearly with \u03b1: \u03b1=1.0 \u2192 \u03b1\u00b7\u03bb_max \u2248 1.60\u00d710\u2074, \u03b1=0.0001 \u2192 \u03b1\u00b7\u03bb_max \u2248 1.60. Smaller \u03b1\u00b7\u03bb_max means slower physical dynamics, which creates a flatter loss landscape and causes optimizer stall.",
+  "all_alpha_converged": true,
+  "stiffness_threshold_alpha": null,
+  "stiffness_threshold_ratio": null,
+  "non_failure_note": "IMPORTANT: No catastrophic stiffness failure occurred. All 5 \u03b1 values achieve L2 < 0.05. The heat equation is not stiff enough in the tested \u03b1 range to cause PINN convergence failure. The actual finding is subtler: small \u03b1 (high temporal stiffness) causes premature early stopping where the optimizer stalls before the full training budget is used, leaving L2 at a suboptimal value.",
+  "premature_stop_alphas": [],
+  "premature_stop_note": "FIX 3: v1 used 'no decrease for 10000 consecutive epochs' as early stopping criterion. This fires trivially when CosineAnnealingLR reaches lr_min, regardless of genuine convergence. v2 measures relative improvement over a 5000-epoch window: stop when improvement < 0.1%. Premature stop detected for \u03b1 \u2208 []. These runs stopped before the full budget because the optimizer stalled, not because the solution was found.",
+  "non_monotone_l2_note": "L2 pattern (\u03b1 high\u2192low): [np.float64(0.001565), np.float64(0.00029), np.float64(0.000278), np.float64(0.000209), np.float64(0.000216)]. Pattern is NON-MONOTONE. Single seed (SEED=42). Non-monotone pattern (if present) may be initialization variance. Not replicated across seeds due to 100k epoch budget.",
+  "max_epochs_budget": 100000
+}

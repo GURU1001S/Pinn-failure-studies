@@ -1,0 +1,86 @@
+{
+  "experiment": "Spectral Bias vs Beta",
+  "version": "v2-fixed",
+  "config": {
+    "n_hidden": 4,
+    "n_neurons": 64,
+    "activation": "tanh",
+    "n_epochs": 15000,
+    "lr": 0.001,
+    "lr_min": 1e-05,
+    "n_collocation": 10000,
+    "l2_failure_threshold": 0.1,
+    "spectral_ratio_threshold": 0.1,
+    "spectral_noise_floor": 1e-08
+  },
+  "beta_values": [
+    1,
+    5,
+    10,
+    30,
+    50,
+    100
+  ],
+  "l2_errors": [
+    0.004718211070821524,
+    0.0058419116874485165,
+    0.04135378757323154,
+    0.9078626447253862,
+    0.9630154180074836,
+    0.99226928544475
+  ],
+  "dominant_frequencies": [
+    0.15915494309189535,
+    0.7957747154594768,
+    1.5915494309189535,
+    4.7746482927568605,
+    7.957747154594767,
+    15.915494309189533
+  ],
+  "spectral_failure_detected": [
+    false,
+    true,
+    true,
+    true,
+    true,
+    true
+  ],
+  "cutoff_frequency_indices": [
+    null,
+    64,
+    82,
+    1,
+    1,
+    1
+  ],
+  "cutoff_frequencies": [
+    null,
+    64.0,
+    82.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "empirical_failure_detected": true,
+  "empirical_cutoff_beta": 30,
+  "empirical_cutoff_frequency": 4.7746482927568605,
+  "failure_betas": [
+    30,
+    50,
+    100
+  ],
+  "training_times_seconds": [
+    126.53985619544983,
+    135.06349992752075,
+    135.42408084869385,
+    133.80585074424744,
+    130.20391368865967,
+    121.36500310897827
+  ],
+  "total_training_time_seconds": 782.4022045135498,
+  "notes": {
+    "training_curve_spikes": "Periodic loss spikes visible in training_curves.png are a collocation resampling artifact. Each time a new random batch of collocation points is drawn, high-residual points are sampled causing a transient loss spike. This is NOT gradient instability. Spikes disappear with fixed collocation sets. Do not interpret as a failure signal.",
+    "cutoff_frequency_fix": "v1 find_cutoff_frequency() incorrectly returned index 128 (Nyquist) for passing betas and index 1 for failing betas due to a threshold logic error. v2 uses a noise-floor-gated ratio test and returns null when no spectral failure is detected, eliminating the ambiguous sentinel value.",
+    "empirical_cutoff_fix": "v1 set empirical_cutoff_beta = BETA_VALUES[-1] = 100 when no failure occurred, making 'never failed' indistinguishable from 'failed at beta=100'. v2 uses None with an explicit empirical_failure_detected boolean flag."
+  }
+}

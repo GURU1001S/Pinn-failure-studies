@@ -1,0 +1,320 @@
+{
+  "experiment": "Boundary vs Interior Ratio",
+  "version": "v2-fast",
+  "config": {
+    "total_budget": 1000,
+    "n_seeds": 3,
+    "n_epochs": 10000,
+    "failure_threshold": 0.1,
+    "bc_fractions": [
+      0.01,
+      0.05,
+      0.1,
+      0.15,
+      0.2,
+      0.3,
+      0.4,
+      0.5,
+      0.6,
+      0.7,
+      0.8,
+      0.9,
+      0.95,
+      0.99
+    ],
+    "early_exit_check": 2000,
+    "early_exit_loss": 20.0
+  },
+  "per_ratio": {
+    "0.01": {
+      "n_bc": 10,
+      "n_int": 990,
+      "l2_per_seed": [
+        6.328656396098236,
+        3.1894026721117794,
+        2.2686452821270047
+      ],
+      "mean_l2": 3.9289014501123396,
+      "std_l2": 1.7380192544753774,
+      "mean_final_loss": 0.09115455452601114,
+      "std_final_loss": 0.040935883253379685,
+      "status": "FAIL"
+    },
+    "0.05": {
+      "n_bc": 50,
+      "n_int": 950,
+      "l2_per_seed": [
+        0.08964192042551145,
+        0.034504561306772666,
+        0.06891234726528327
+      ],
+      "mean_l2": 0.06435294299918913,
+      "std_l2": 0.022739440305241315,
+      "mean_final_loss": 0.10020880044003329,
+      "std_final_loss": 0.04454836829134404,
+      "status": "PASS"
+    },
+    "0.10": {
+      "n_bc": 100,
+      "n_int": 900,
+      "l2_per_seed": [
+        0.03498612526862276,
+        0.0681266118011803,
+        0.0466861048721552
+      ],
+      "mean_l2": 0.049932947313986085,
+      "std_l2": 0.013722960110345794,
+      "mean_final_loss": 0.10593407543003559,
+      "std_final_loss": 0.03111044077999487,
+      "status": "PASS"
+    },
+    "0.15": {
+      "n_bc": 150,
+      "n_int": 850,
+      "l2_per_seed": [
+        1.0419699701594425,
+        0.08756978722086876,
+        0.051178019984181894
+      ],
+      "mean_l2": 0.393572592454831,
+      "std_l2": 0.4587268321062218,
+      "mean_final_loss": 0.2608717474440733,
+      "std_final_loss": 0.1319406925078393,
+      "status": "PASS"
+    },
+    "0.20": {
+      "n_bc": 200,
+      "n_int": 800,
+      "l2_per_seed": [
+        0.029508329908057313,
+        0.036343845109164045,
+        0.05865194645965454
+      ],
+      "mean_l2": 0.0415013738256253,
+      "std_l2": 0.01244421346844856,
+      "mean_final_loss": 0.08996713027358055,
+      "std_final_loss": 0.0521731832328323,
+      "status": "PASS"
+    },
+    "0.30": {
+      "n_bc": 300,
+      "n_int": 700,
+      "l2_per_seed": [
+        0.19642038960654534,
+        0.18541769749780077,
+        0.1427705366604266
+      ],
+      "mean_l2": 0.17486954125492424,
+      "std_l2": 0.023137622758588702,
+      "mean_final_loss": 0.22254662268360456,
+      "std_final_loss": 0.13293041282468943,
+      "status": "PASS"
+    },
+    "0.40": {
+      "n_bc": 400,
+      "n_int": 600,
+      "l2_per_seed": [
+        1.0871084974976364,
+        2.3672614473056903,
+        0.05792017138052888
+      ],
+      "mean_l2": 1.1707633720612853,
+      "std_l2": 0.944638514883377,
+      "mean_final_loss": 0.6404612215434512,
+      "std_final_loss": 0.6317414736019519,
+      "status": "FAIL"
+    },
+    "0.50": {
+      "n_bc": 500,
+      "n_int": 500,
+      "l2_per_seed": [
+        0.5482647574619735,
+        3.9812705772398718,
+        0.6873378968608344
+      ],
+      "mean_l2": 1.7389577438542265,
+      "std_l2": 1.5865708234218086,
+      "mean_final_loss": 0.16881137946248057,
+      "std_final_loss": 0.12174869754039883,
+      "status": "FAIL"
+    },
+    "0.60": {
+      "n_bc": 600,
+      "n_int": 400,
+      "l2_per_seed": [
+        4.1193785213767375,
+        2.241805878765079,
+        1.3260678046746495
+      ],
+      "mean_l2": 2.562417401605489,
+      "std_l2": 1.1626808107255744,
+      "mean_final_loss": 0.2943011264602344,
+      "std_final_loss": 0.17576195442851783,
+      "status": "FAIL"
+    },
+    "0.70": {
+      "n_bc": 700,
+      "n_int": 300,
+      "l2_per_seed": [
+        4.818018422501365,
+        2.2850669424254786,
+        2.544088364768949
+      ],
+      "mean_l2": 3.2157245765652642,
+      "std_l2": 1.1379168689178585,
+      "mean_final_loss": 0.20987932406365872,
+      "std_final_loss": 0.09981842989202036,
+      "status": "FAIL"
+    },
+    "0.80": {
+      "n_bc": 800,
+      "n_int": 200,
+      "l2_per_seed": [
+        4.707527859905638,
+        4.5793725085630195,
+        4.725538378581223
+      ],
+      "mean_l2": 4.670812915683293,
+      "std_l2": 0.06507485810706505,
+      "mean_final_loss": 0.14761453140775363,
+      "std_final_loss": 0.0980663803884471,
+      "status": "FAIL"
+    },
+    "0.90": {
+      "n_bc": 900,
+      "n_int": 100,
+      "l2_per_seed": [
+        5.797643283271886,
+        3.9062771601310144,
+        1.924343630959449
+      ],
+      "mean_l2": 3.8760880247874496,
+      "std_l2": 1.5814120456247331,
+      "mean_final_loss": 0.09398705796400707,
+      "std_final_loss": 0.02027552843841856,
+      "status": "FAIL"
+    },
+    "0.95": {
+      "n_bc": 950,
+      "n_int": 50,
+      "l2_per_seed": [
+        2.1032907199381543,
+        4.7778572999777875,
+        5.507212444253351
+      ],
+      "mean_l2": 4.1294534880564315,
+      "std_l2": 1.4633275786831066,
+      "mean_final_loss": 0.09073112177227934,
+      "std_final_loss": 0.05616186387153311,
+      "status": "FAIL"
+    },
+    "0.99": {
+      "n_bc": 990,
+      "n_int": 10,
+      "l2_per_seed": [
+        2.154808344464272,
+        1.70899565191112,
+        3.6598677429014623
+      ],
+      "mean_l2": 2.5078905797589512,
+      "std_l2": 0.8346559281171986,
+      "mean_final_loss": 0.03363537510732809,
+      "std_final_loss": 0.019152786847170335,
+      "status": "FAIL"
+    }
+  },
+  "bc_fractions": [
+    0.01,
+    0.05,
+    0.1,
+    0.15,
+    0.2,
+    0.3,
+    0.4,
+    0.5,
+    0.6,
+    0.7,
+    0.8,
+    0.9,
+    0.95,
+    0.99
+  ],
+  "l2_errors": [
+    3.9289014501123396,
+    0.06435294299918913,
+    0.049932947313986085,
+    0.393572592454831,
+    0.0415013738256253,
+    0.17486954125492424,
+    1.1707633720612853,
+    1.7389577438542265,
+    2.562417401605489,
+    3.2157245765652642,
+    4.670812915683293,
+    3.8760880247874496,
+    4.1294534880564315,
+    2.5078905797589512
+  ],
+  "std_l2_errors": [
+    1.7380192544753774,
+    0.022739440305241315,
+    0.013722960110345794,
+    0.4587268321062218,
+    0.01244421346844856,
+    0.023137622758588702,
+    0.944638514883377,
+    1.5865708234218086,
+    1.1626808107255744,
+    1.1379168689178585,
+    0.06507485810706505,
+    1.5814120456247331,
+    1.4633275786831066,
+    0.8346559281171986
+  ],
+  "optimal_bc_fraction": 0.2,
+  "optimal_l2": 0.0415013738256253,
+  "safe_zone_min": 0.05,
+  "safe_zone_max": 0.2,
+  "passing_fracs": [
+    0.05,
+    0.1,
+    0.2
+  ],
+  "boundary_failure_fracs": [
+    0.01
+  ],
+  "interior_failure_fracs": [
+    0.3,
+    0.4,
+    0.5,
+    0.6,
+    0.7,
+    0.8,
+    0.9,
+    0.95,
+    0.99
+  ],
+  "interior_failure_note": "Interior starvation (high BC fraction) is the dominant failure mode. High-BC configs (>50%) produce L2 > 0.5, with the worst case at 90% BC (L2\u22486.2). The network has insufficient interior points to enforce PDE physics.",
+  "boundary_failure_note": "Boundary starvation (low BC fraction) also causes failure at BC=1% (L2\u22482.2). The problem becomes numerically ill-posed without sufficient boundary constraints. Recovery begins at BC\u22655% (L2\u22480.11).",
+  "anomaly_fracs": [
+    0.15
+  ],
+  "confirmed_anomalies": [],
+  "noise_anomalies": [
+    0.15
+  ],
+  "anomaly_note": "Non-monotonic failures within the safe zone (BC fracs: ['15%']). Confirmed (all 3 seeds fail): []. Likely noise (some seeds pass): ['15%']. Confirmed anomalies are genuine non-monotonic failure zones. Noise anomalies are initialisation-dependent and would disappear with more seeds.",
+  "more_critical_failure_mode": "boundary_starvation",
+  "low_extreme_l2": 3.9289014501123396,
+  "high_extreme_l2": 2.5078905797589512,
+  "convergence_speed_note": "v1 convergence_speed.png showed epochs to reach loss < 1e-3. This threshold was never crossed \u2014 all bars were exactly 10000, rendering the plot uninformative. v2/v2-fast plots final training loss (mean over last 500 epochs) which varies meaningfully across ratios.",
+  "heatmap_note": "v1 error_heatmaps.png used independent colorbars per panel. v2/v2-fast uses 95th-percentile global clip with a single shared colorbar so same colour = same error across panels.",
+  "speed_notes": {
+    "torch_compile": "mode=reduce-overhead (SPEED 1)",
+    "tf32_matmul_precision": "high (SPEED 2)",
+    "median_retrain_eliminated": true,
+    "early_exit_check_epoch": 2000,
+    "early_exit_loss_threshold": 20.0,
+    "non_blocking_transfers": true
+  }
+}

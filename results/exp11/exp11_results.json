@@ -1,0 +1,124 @@
+{
+  "experiment": "Multi-Scale Failure (Allen-Cahn)",
+  "version": "v2-journal-ready",
+  "config": {
+    "epsilon_values": [
+      0.1,
+      0.01,
+      0.001,
+      0.0001
+    ],
+    "n_hidden": 4,
+    "n_neurons": 128,
+    "n_epochs": 30000,
+    "n_seeds": 3,
+    "l2_fail_thresh": 0.1
+  },
+  "per_epsilon": {
+    "0.1": {
+      "l2_per_seed": [
+        0.0018437891504306558,
+        0.001940132874552961,
+        0.001816668254805515
+      ],
+      "mean_l2": 0.0018668634265963772,
+      "std_l2": 5.2979208171850155e-05,
+      "mean_interface_error": 0.0004047637478947889,
+      "std_interface_error": 7.124892183222887e-05,
+      "mean_bulk_error": 0.0005692009606013028,
+      "std_bulk_error": 0.00012697914349100526,
+      "ie_be_ratio": 0.7111086872854137,
+      "ie_dominates_all_seeds": false,
+      "failure_mode": "success",
+      "mode_unanimous": true,
+      "mode_per_seed": [
+        "success",
+        "success",
+        "success"
+      ],
+      "mean_training_time": 582.0656758944193
+    },
+    "0.01": {
+      "l2_per_seed": [
+        0.0018921109220701574,
+        0.0015872064496030528,
+        0.0010560092513302952
+      ],
+      "mean_l2": 0.0015117755410011685,
+      "std_l2": 0.000345479249191493,
+      "mean_interface_error": 0.0012845256441833097,
+      "std_interface_error": 0.00036519431955986175,
+      "mean_bulk_error": 0.0005496562138668041,
+      "std_bulk_error": 8.477430388437234e-05,
+      "ie_be_ratio": 2.33696192597685,
+      "ie_dominates_all_seeds": true,
+      "failure_mode": "success",
+      "mode_unanimous": true,
+      "mode_per_seed": [
+        "success",
+        "success",
+        "success"
+      ],
+      "mean_training_time": 582.1544960339864
+    },
+    "0.001": {
+      "l2_per_seed": [
+        0.001958297720817007,
+        0.001656227675045133,
+        0.0009219101920257857
+      ],
+      "mean_l2": 0.001512145195962642,
+      "std_l2": 0.0004351969654018059,
+      "mean_interface_error": 0.0013233454465505937,
+      "std_interface_error": 0.00040301248673150786,
+      "mean_bulk_error": 0.0005803199213732347,
+      "std_bulk_error": 0.00018621189234609741,
+      "ie_be_ratio": 2.280372252979197,
+      "ie_dominates_all_seeds": true,
+      "failure_mode": "success",
+      "mode_unanimous": true,
+      "mode_per_seed": [
+        "success",
+        "success",
+        "success"
+      ],
+      "mean_training_time": 592.9489607810974
+    },
+    "0.0001": {
+      "l2_per_seed": [
+        0.0016508991097655395,
+        0.0015819957266785096,
+        0.001197404598863778
+      ],
+      "mean_l2": 0.0014767664784359421,
+      "std_l2": 0.0001995314743238584,
+      "mean_interface_error": 0.0013654558542783026,
+      "std_interface_error": 0.0001736161546780196,
+      "mean_bulk_error": 0.0005060486370464817,
+      "std_bulk_error": 0.00013509090051292953,
+      "ie_be_ratio": 2.698269996828156,
+      "ie_dominates_all_seeds": true,
+      "failure_mode": "success",
+      "mode_unanimous": true,
+      "mode_per_seed": [
+        "success",
+        "success",
+        "success"
+      ],
+      "mean_training_time": 588.7876811822256
+    }
+  },
+  "all_epsilon_converged": true,
+  "any_epsilon_failed": false,
+  "primary_failure_driver": "none_detected",
+  "primary_driver_note": "No failure detected (all L2 < 0.1). primary_failure_driver is not applicable. Spectral bias precursor: interface/bulk ratio trend is increasing as \u03b5 decreases (ratios: ['0.711', '2.337', '2.280', '2.698']). Interface error grows faster than bulk error at small \u03b5, consistent with spectral bias acting on the sharp interface. Full failure would likely require \u03b5 < 0.0001.",
+  "non_failure_note": "IMPORTANT: No catastrophic failure occurs in \u03b5 \u2208 [0.1, 0.0001]. All runs achieve L2 < 0.1. This is a genuine finding: the Allen-Cahn equation with tanh PINN and \u03b5 \u2265 0.0001 does NOT show the expected spectral bias failure in the global L2 metric. However, the interface/bulk error RATIO increases as \u03b5 decreases, which IS a spectral bias precursor: the PINN is disproportionately worse at the sharp interface relative to the smooth bulk. Full interface failure would likely require \u03b5 < 0.0001, at which point the interface becomes sub-pixel on the collocation grid.",
+  "interface_bulk_ratios": {
+    "0.1": 0.7111086872854137,
+    "0.01": 2.33696192597685,
+    "0.001": 2.280372252979197,
+    "0.0001": 2.698269996828156
+  },
+  "ratio_trend_note": "interface/bulk ratio at \u03b5=0.1: 0.711  (< 1 = bulk dominant). Ratio increases as \u03b5 decreases, crossing 1.0 between \u03b5=0.1 and \u03b5=0.01. At \u03b5=0.001 and 0.0001 the interface dominates consistently across all seeds. This is the spectral bias signature: the PINN learns smooth bulk regions more accurately than sharp interfaces.",
+  "v1_overstatement_note": "v1 reported primary_failure_driver='interface_width' based on ie_growth / be_growth ratio, implying failure was observed. All 4 \u03b5 values were classified 'success'. The synthesis document overstated 'Interface Error spikes massively at \u03b5 \u2264 0.001'. Actual values: \u03b5=0.001 ie=0.00182, \u03b5=0.0001 ie=0.00099 \u2014 both below 0.002, not a 'massive spike'. v2 correctly reports all-success with a spectral bias precursor."
+}

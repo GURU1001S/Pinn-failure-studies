@@ -1,0 +1,48 @@
+{
+  "experiment": "Industrial Robustness \u2014 Sensor Noise",
+  "version": "v1",
+  "hypothesis": "In standard deep learning, noise on training targets acts as implicit regularization (label smoothing). In PINNs, noise on IC/BC targets actively shatters the loss landscape by creating an irreconcilable conflict: the PDE loss demands exact physics while the corrupted IC/BC targets demand fitting to noise. This accelerates the onset of gradient pathology.",
+  "config": {
+    "beta": 30,
+    "seed": 42,
+    "n_hidden": 4,
+    "n_neurons": 64,
+    "n_epochs": 40000,
+    "lr": 0.001,
+    "noise_levels": [
+      0.0,
+      0.01,
+      0.05,
+      0.1
+    ],
+    "track_every": 500,
+    "pathology_threshold": -0.9
+  },
+  "per_noise_level": {
+    "0%": {
+      "l2_error": 1.1150360941139892,
+      "pathology_onset": 500,
+      "final_loss": 0.037740666419267654,
+      "elapsed_s": 309.12526392936707
+    },
+    "1%": {
+      "l2_error": 0.14870259725512208,
+      "pathology_onset": null,
+      "final_loss": 0.01680040918290615,
+      "elapsed_s": 297.2882950305939
+    },
+    "5%": {
+      "l2_error": 0.7931123959422596,
+      "pathology_onset": 500,
+      "final_loss": 0.2695651948451996,
+      "elapsed_s": 303.8915841579437
+    },
+    "10%": {
+      "l2_error": 0.47766004668300827,
+      "pathology_onset": null,
+      "final_loss": 0.9360531568527222,
+      "elapsed_s": 296.22695779800415
+    }
+  },
+  "total_elapsed_s": 1207.3715710639954
+}

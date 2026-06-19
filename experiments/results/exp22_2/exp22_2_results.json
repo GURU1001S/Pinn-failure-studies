@@ -1,0 +1,745 @@
+{
+  "experiment": "Failure Recovery Boundary",
+  "experiment_id": "22_2",
+  "version": "v2-journal-ready",
+  "output_dir": "D:\\Games\\FAILURE STUDIES\\experiments\\results\\exp22_2",
+  "config": {
+    "n_failed_runs": 20,
+    "n_interventions": 5,
+    "n_seeds": 4,
+    "failure_modes": [
+      "SpectralBias",
+      "GradientPathology",
+      "SharpInterface",
+      "HighFreqHelmholtz",
+      "OptimStagnation"
+    ],
+    "intervention_labels": [
+      "I1: 10\u00d7 Collocation",
+      "I2: Fourier Features",
+      "I3: L-BFGS",
+      "I4: Loss Reweighting",
+      "I5: Domain Decomp."
+    ],
+    "recovered_thresh": 0.1,
+    "partial_thresh": 0.4,
+    "global_seed": 42
+  },
+  "fix_notes": {
+    "fix1_config_count": "v1 generated 4\u00d75+5=25 configs then trimmed with [:20], dropping all OptimStagnation. v2 generates exactly 4 seeds \u00d7 5 modes = 20.",
+    "fix2_burgers_ref": "v1 used linear heat solution -sin(\u03c0x)exp(-\u03bd\u03c0\u00b2t) as Burgers reference. For \u03bd=0.001 this is invalid past t\u22480.3. v2 uses Crank-Nicolson FD reference.",
+    "fix3_allencahn_ref": "v1 used x\u00b2cos(\u03c0x)exp(-t) which satisfies the IC but not the Allen-Cahn PDE. v2 uses forward-Euler FD reference.",
+    "fix4_helmholtz_decomp": "v1 passed tc_l (time) as second coord to Helmholtz sub-nets (which take y not t). v2 samples yc_l, yc_r and uses them consistently for both residual and network.",
+    "fix5_lbfgs_closure": "v1 re-sampled collocation data on each closure call (up to 20 per step), violating Wolfe conditions. v2 samples once per outer step and captures in closure.",
+    "fix6_seeds": "Recovery training seeded by (GLOBAL_SEED + run*10 + intervention)."
+  },
+  "recovery_matrix": [
+    [
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.9906063521356818,
+        "post_l2": 0.9702700063540856,
+        "improvement": 0.020336345781596266
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.9906063521356818,
+        "post_l2": 1.058665570212472,
+        "improvement": -0.06805921807679027
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.9906063521356818,
+        "post_l2": 0.9653720977241825,
+        "improvement": 0.02523425441149929
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.9906063521356818,
+        "post_l2": 0.9479981543795671,
+        "improvement": 0.042608197756114685
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.9906063521356818,
+        "post_l2": 1.0000884637352618,
+        "improvement": -0.009482111599580012
+      }
+    ],
+    [
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.29938438011787605,
+        "post_l2": 0.09107681728797222,
+        "improvement": 0.20830756282990381
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.29938438011787605,
+        "post_l2": 0.0462405695777665,
+        "improvement": 0.25314381054010954
+      },
+      {
+        "outcome": "PARTIAL",
+        "pre_l2": 0.29938438011787605,
+        "post_l2": 0.29248121490572554,
+        "improvement": 0.006903165212150508
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.29938438011787605,
+        "post_l2": 0.09780789590589563,
+        "improvement": 0.20157648421198043
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.29938438011787605,
+        "post_l2": 0.9982022748267931,
+        "improvement": -0.6988178947089171
+      }
+    ],
+    [
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.06056616155743059,
+        "post_l2": 0.044352055067216165,
+        "improvement": 0.016214106490214424
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.06056616155743059,
+        "post_l2": 0.03558754595647824,
+        "improvement": 0.024978615600952346
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.06056616155743059,
+        "post_l2": 0.0629116627366212,
+        "improvement": -0.0023455011791906136
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.06056616155743059,
+        "post_l2": 0.05885808727346158,
+        "improvement": 0.001708074283969005
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.06056616155743059,
+        "post_l2": 0.9983666637886036,
+        "improvement": -0.9378005022311731
+      }
+    ],
+    [
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.011865225961935231,
+        "post_l2": 0.008995976810652367,
+        "improvement": 0.0028692491512828638
+      },
+      {
+        "outcome": "PARTIAL",
+        "pre_l2": 0.011865225961935231,
+        "post_l2": 0.11914092837881331,
+        "improvement": -0.10727570241687807
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.011865225961935231,
+        "post_l2": NaN,
+        "improvement": NaN
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.011865225961935231,
+        "post_l2": 0.005444750452175745,
+        "improvement": 0.0064204755097594865
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.011865225961935231,
+        "post_l2": 1.4141802627661983,
+        "improvement": -1.4023150368042632
+      }
+    ],
+    [
+      {
+        "outcome": "FAILED",
+        "pre_l2": 1.0147619970317183,
+        "post_l2": 0.9961042416233657,
+        "improvement": 0.018657755408352572
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 1.0147619970317183,
+        "post_l2": 0.8212199043316794,
+        "improvement": 0.19354209270003897
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 1.0147619970317183,
+        "post_l2": 0.8513595961598631,
+        "improvement": 0.1634024008718552
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 1.0147619970317183,
+        "post_l2": 1.0017934141397926,
+        "improvement": 0.012968582891925706
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 1.0147619970317183,
+        "post_l2": 1.03367450370499,
+        "improvement": -0.0189125066732716
+      }
+    ],
+    [
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.9781120709573206,
+        "post_l2": 0.9718010646898899,
+        "improvement": 0.006311006267430641
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.9781120709573206,
+        "post_l2": 0.9904179998635494,
+        "improvement": -0.012305928906228836
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.9781120709573206,
+        "post_l2": NaN,
+        "improvement": NaN
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.9781120709573206,
+        "post_l2": 0.9664163481533559,
+        "improvement": 0.011695722803964692
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.9781120709573206,
+        "post_l2": 1.0001422614899524,
+        "improvement": -0.022030190532631888
+      }
+    ],
+    [
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.29396136420426566,
+        "post_l2": 0.09614316689943846,
+        "improvement": 0.1978181973048272
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.29396136420426566,
+        "post_l2": 0.05238522604594999,
+        "improvement": 0.2415761381583157
+      },
+      {
+        "outcome": "PARTIAL",
+        "pre_l2": 0.29396136420426566,
+        "post_l2": 0.2920269852605908,
+        "improvement": 0.0019343789436748748
+      },
+      {
+        "outcome": "PARTIAL",
+        "pre_l2": 0.29396136420426566,
+        "post_l2": 0.1418141830675355,
+        "improvement": 0.15214718113673018
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.29396136420426566,
+        "post_l2": 0.997136655996604,
+        "improvement": -0.7031752917923383
+      }
+    ],
+    [
+      {
+        "outcome": "PARTIAL",
+        "pre_l2": 0.13122419937717378,
+        "post_l2": 0.10135342304067058,
+        "improvement": 0.029870776336503202
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.13122419937717378,
+        "post_l2": 0.040230534358423505,
+        "improvement": 0.09099366501875028
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.13122419937717378,
+        "post_l2": 0.09493073828495839,
+        "improvement": 0.03629346109221539
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.13122419937717378,
+        "post_l2": 0.061417553926064176,
+        "improvement": 0.0698066454511096
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.13122419937717378,
+        "post_l2": 0.9964191913768458,
+        "improvement": -0.865194991999672
+      }
+    ],
+    [
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.009652663826830856,
+        "post_l2": 0.007974013660514544,
+        "improvement": 0.0016786501663163117
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.009652663826830856,
+        "post_l2": 0.058076726437346606,
+        "improvement": -0.04842406261051575
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.009652663826830856,
+        "post_l2": NaN,
+        "improvement": NaN
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.009652663826830856,
+        "post_l2": 0.005050024812869497,
+        "improvement": 0.004602639013961359
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.009652663826830856,
+        "post_l2": 1.4141691998201282,
+        "improvement": -1.4045165359932974
+      }
+    ],
+    [
+      {
+        "outcome": "FAILED",
+        "pre_l2": 1.0871352202214204,
+        "post_l2": 0.9425019085978905,
+        "improvement": 0.14463331162352988
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 1.0871352202214204,
+        "post_l2": 0.777028812647383,
+        "improvement": 0.3101064075740374
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 1.0871352202214204,
+        "post_l2": 3.334204313437754,
+        "improvement": -2.247069093216334
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 1.0871352202214204,
+        "post_l2": 0.9625238700480494,
+        "improvement": 0.124611350173371
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 1.0871352202214204,
+        "post_l2": 1.0059083525636359,
+        "improvement": 0.08122686765778453
+      }
+    ],
+    [
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.978541174177839,
+        "post_l2": 0.971828667620312,
+        "improvement": 0.006712506557527087
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.978541174177839,
+        "post_l2": 1.0297233484049855,
+        "improvement": -0.05118217422714644
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.978541174177839,
+        "post_l2": 0.9600509779508883,
+        "improvement": 0.018490196226950695
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.978541174177839,
+        "post_l2": 0.9568732171899955,
+        "improvement": 0.021667956987843517
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.978541174177839,
+        "post_l2": 1.000023522621332,
+        "improvement": -0.02148234844349306
+      }
+    ],
+    [
+      {
+        "outcome": "PARTIAL",
+        "pre_l2": 0.30021929720796425,
+        "post_l2": 0.27172302988270836,
+        "improvement": 0.028496267325255897
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.30021929720796425,
+        "post_l2": 0.07059415204857021,
+        "improvement": 0.22962514515939403
+      },
+      {
+        "outcome": "PARTIAL",
+        "pre_l2": 0.30021929720796425,
+        "post_l2": 0.3022355646765811,
+        "improvement": -0.002016267468616828
+      },
+      {
+        "outcome": "PARTIAL",
+        "pre_l2": 0.30021929720796425,
+        "post_l2": 0.29105232036231143,
+        "improvement": 0.009166976845652819
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.30021929720796425,
+        "post_l2": 1.0194189942426233,
+        "improvement": -0.719199697034659
+      }
+    ],
+    [
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.07959292422041986,
+        "post_l2": 0.0543697522980147,
+        "improvement": 0.025223171922405162
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.07959292422041986,
+        "post_l2": 0.04674877255785665,
+        "improvement": 0.03284415166256321
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.07959292422041986,
+        "post_l2": 0.07014132405736641,
+        "improvement": 0.00945160016305345
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.07959292422041986,
+        "post_l2": 0.042942186258339135,
+        "improvement": 0.03665073796208072
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.07959292422041986,
+        "post_l2": 1.0018607645198192,
+        "improvement": -0.9222678402993993
+      }
+    ],
+    [
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.010071971845445666,
+        "post_l2": 0.0069778057629125215,
+        "improvement": 0.003094166082533144
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.010071971845445666,
+        "post_l2": 0.06989002179647386,
+        "improvement": -0.05981804995102819
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.010071971845445666,
+        "post_l2": NaN,
+        "improvement": NaN
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.010071971845445666,
+        "post_l2": 0.00472962768810638,
+        "improvement": 0.0053423441573392854
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.010071971845445666,
+        "post_l2": 1.4141190591355264,
+        "improvement": -1.4040470872900808
+      }
+    ],
+    [
+      {
+        "outcome": "FAILED",
+        "pre_l2": 1.092505849903571,
+        "post_l2": 1.1004273342134219,
+        "improvement": -0.007921484309850957
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 1.092505849903571,
+        "post_l2": 0.8566703772444305,
+        "improvement": 0.2358354726591404
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 1.092505849903571,
+        "post_l2": 3.5992709633957722,
+        "improvement": -2.506765113492201
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 1.092505849903571,
+        "post_l2": 0.982475960647839,
+        "improvement": 0.11002988925573187
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 1.092505849903571,
+        "post_l2": 1.0371689835148437,
+        "improvement": 0.05533686638872726
+      }
+    ],
+    [
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.9745697073694112,
+        "post_l2": 0.96823817429549,
+        "improvement": 0.006331533073921203
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.9745697073694112,
+        "post_l2": 1.0207716273051644,
+        "improvement": -0.04620191993575318
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.9745697073694112,
+        "post_l2": 0.9625540848375498,
+        "improvement": 0.012015622531861392
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.9745697073694112,
+        "post_l2": 0.9488496049600846,
+        "improvement": 0.02572010240932654
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.9745697073694112,
+        "post_l2": 1.0000025343494978,
+        "improvement": -0.025432826980086642
+      }
+    ],
+    [
+      {
+        "outcome": "PARTIAL",
+        "pre_l2": 0.30062560993459614,
+        "post_l2": 0.21364867632202153,
+        "improvement": 0.08697693361257461
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.30062560993459614,
+        "post_l2": 0.05053808092271906,
+        "improvement": 0.2500875290118771
+      },
+      {
+        "outcome": "PARTIAL",
+        "pre_l2": 0.30062560993459614,
+        "post_l2": 0.29434651094290526,
+        "improvement": 0.006279098991690879
+      },
+      {
+        "outcome": "PARTIAL",
+        "pre_l2": 0.30062560993459614,
+        "post_l2": 0.23904618341985334,
+        "improvement": 0.0615794265147428
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.30062560993459614,
+        "post_l2": 1.0016195094217466,
+        "improvement": -0.7009938994871505
+      }
+    ],
+    [
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.10730713804919852,
+        "post_l2": 0.06519834988778499,
+        "improvement": 0.04210878816141353
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.10730713804919852,
+        "post_l2": 0.047222701957501244,
+        "improvement": 0.06008443609169727
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.10730713804919852,
+        "post_l2": NaN,
+        "improvement": NaN
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.10730713804919852,
+        "post_l2": 0.054171130506629715,
+        "improvement": 0.0531360075425688
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.10730713804919852,
+        "post_l2": 0.9998075323673695,
+        "improvement": -0.892500394318171
+      }
+    ],
+    [
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.01005325601874174,
+        "post_l2": 0.008559878841459447,
+        "improvement": 0.0014933771772822936
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.01005325601874174,
+        "post_l2": 0.09850493794842793,
+        "improvement": -0.0884516819296862
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.01005325601874174,
+        "post_l2": NaN,
+        "improvement": NaN
+      },
+      {
+        "outcome": "RECOVERED",
+        "pre_l2": 0.01005325601874174,
+        "post_l2": 0.004351378635724373,
+        "improvement": 0.005701877383017368
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 0.01005325601874174,
+        "post_l2": 1.4142361539435329,
+        "improvement": -1.404182897924791
+      }
+    ],
+    [
+      {
+        "outcome": "FAILED",
+        "pre_l2": 1.0838879904484744,
+        "post_l2": 1.044039275065641,
+        "improvement": 0.0398487153828333
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 1.0838879904484744,
+        "post_l2": 0.7930097656722649,
+        "improvement": 0.2908782247762095
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 1.0838879904484744,
+        "post_l2": 2.6320668134432164,
+        "improvement": -1.548178822994742
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 1.0838879904484744,
+        "post_l2": 0.9862354796082101,
+        "improvement": 0.09765251084026427
+      },
+      {
+        "outcome": "FAILED",
+        "pre_l2": 1.0838879904484744,
+        "post_l2": 1.1288202280137596,
+        "improvement": -0.044932237565285194
+      }
+    ]
+  ],
+  "intervention_recovery_rates": {
+    "I1: 10\u00d7 Collocation": 0.45,
+    "I2: Fourier Features": 0.55,
+    "I3: L-BFGS": 0.15,
+    "I4: Loss Reweighting": 0.45,
+    "I5: Domain Decomp.": 0.0
+  },
+  "best_intervention": "I2: Fourier Features",
+  "unrecoverable_runs": [
+    {
+      "run": 0,
+      "mode": "SpectralBias",
+      "seed": 0,
+      "pre_l2": 0.9906063521356818,
+      "best_post_l2": 0.9479981543795671
+    },
+    {
+      "run": 4,
+      "mode": "OptimStagnation",
+      "seed": 0,
+      "pre_l2": 1.0147619970317183,
+      "best_post_l2": 0.8212199043316794
+    },
+    {
+      "run": 5,
+      "mode": "SpectralBias",
+      "seed": 1,
+      "pre_l2": 0.9781120709573206,
+      "best_post_l2": 0.9664163481533559
+    },
+    {
+      "run": 9,
+      "mode": "OptimStagnation",
+      "seed": 1,
+      "pre_l2": 1.0871352202214204,
+      "best_post_l2": 0.777028812647383
+    },
+    {
+      "run": 10,
+      "mode": "SpectralBias",
+      "seed": 2,
+      "pre_l2": 0.978541174177839,
+      "best_post_l2": 0.9568732171899955
+    },
+    {
+      "run": 14,
+      "mode": "OptimStagnation",
+      "seed": 2,
+      "pre_l2": 1.092505849903571,
+      "best_post_l2": 0.8566703772444305
+    },
+    {
+      "run": 15,
+      "mode": "SpectralBias",
+      "seed": 3,
+      "pre_l2": 0.9745697073694112,
+      "best_post_l2": 0.9488496049600846
+    },
+    {
+      "run": 19,
+      "mode": "OptimStagnation",
+      "seed": 3,
+      "pre_l2": 1.0838879904484744,
+      "best_post_l2": 0.7930097656722649
+    }
+  ],
+  "elapsed_seconds": 0.009382963180541992
+}

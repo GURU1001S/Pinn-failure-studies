@@ -1,0 +1,204 @@
+{
+  "experiment": "Collocation Starvation",
+  "version": "v2-journal-ready",
+  "config": {
+    "n_hidden": 4,
+    "n_neurons": 64,
+    "n_epochs_sweep": 10000,
+    "n_sweep_seeds": 3,
+    "l2_failure_threshold": 0.1,
+    "adaptive_init_pts": 500,
+    "adaptive_add_pts": 100,
+    "adaptive_rounds": 10,
+    "pretrain_epochs": 5000,
+    "epochs_per_round": 2000,
+    "lr_per_round": 0.0005
+  },
+  "count_sweep": {
+    "50": {
+      "l2_per_seed": [
+        3.648468379097827,
+        3.7918763003256215,
+        4.698646424654172
+      ],
+      "mean_l2": 4.046330368025874,
+      "std_l2": 0.4649578018623766,
+      "status": "FAIL"
+    },
+    "100": {
+      "l2_per_seed": [
+        7.286403274355265,
+        5.916488489843765,
+        4.435889026287909
+      ],
+      "mean_l2": 5.87959359682898,
+      "std_l2": 1.164009964005658,
+      "status": "FAIL"
+    },
+    "200": {
+      "l2_per_seed": [
+        8.181145991724575,
+        8.574890858114378,
+        3.178253430628998
+      ],
+      "mean_l2": 6.64476342682265,
+      "std_l2": 2.45645780481231,
+      "status": "FAIL"
+    },
+    "500": {
+      "l2_per_seed": [
+        0.04447722092861046,
+        0.11009820054963278,
+        0.08886271674467464
+      ],
+      "mean_l2": 0.08114604607430596,
+      "std_l2": 0.027339696368490183,
+      "status": "PASS"
+    },
+    "1000": {
+      "l2_per_seed": [
+        0.022907765168149036,
+        0.2285720415396779,
+        0.057633501816842375
+      ],
+      "mean_l2": 0.10303776950822312,
+      "std_l2": 0.08989107959932795,
+      "status": "PASS"
+    },
+    "2000": {
+      "l2_per_seed": [
+        0.03215987814132297,
+        0.05735282098513927,
+        0.03983441789374584
+      ],
+      "mean_l2": 0.04311570567340269,
+      "std_l2": 0.010543441228322714,
+      "status": "PASS"
+    },
+    "5000": {
+      "l2_per_seed": [
+        0.07352631568868265,
+        0.02643567705416415,
+        0.03569214663751907
+      ],
+      "mean_l2": 0.04521804646012195,
+      "std_l2": 0.02037055288603954,
+      "status": "PASS"
+    }
+  },
+  "minimum_viable_count": 500,
+  "minimum_viable_note": "Minimum viable count = 500 based on mean L2 < 0.1 across 3 seeds. The exact threshold may shift 20-30% with different seeds or architectures. This is a necessary but not sufficient condition for convergence.",
+  "non_monotonicity_note": "N=200 produces mean L2=6.6448, which is higher N=100 (mean L2=5.8796). This non-monotonic pattern is verified across 3 seeds. Likely cause: N=200 collocation points interact poorly with the optimizer dynamics at this network capacity, producing a local maximum of error. This is a known phenomenon in numerical PDE methods where intermediate discretizations can produce worse conditioning than coarser or finer ones. Not an implementation artifact.",
+  "adaptive": {
+    "pre_train_l2": 0.4202257109814679,
+    "l2_per_round": [
+      0.366110309193237,
+      0.31852798620511646,
+      0.30039582664503445,
+      0.24506975406263012,
+      0.24278599038836302,
+      0.22251255729630895,
+      0.2221295022308966,
+      0.23495562267881023,
+      0.23229113631292458,
+      0.23573866238200797
+    ],
+    "point_counts": [
+      500,
+      600,
+      700,
+      800,
+      900,
+      1000,
+      1100,
+      1200,
+      1300,
+      1400,
+      1500
+    ],
+    "final_l2": 0.23573866238200797
+  },
+  "uniform": {
+    "pre_train_l2": 0.4191789131703601,
+    "l2_per_round": [
+      0.36941183311566095,
+      0.24581002981473968,
+      0.21598025722081365,
+      0.19935090864631974,
+      0.18852276835140205,
+      0.17746837558055686,
+      0.1722693705285918,
+      0.1644853066317063,
+      0.15899167930957597,
+      0.15425912973139688
+    ],
+    "point_counts": [
+      500,
+      600,
+      700,
+      800,
+      900,
+      1000,
+      1100,
+      1200,
+      1300,
+      1400,
+      1500
+    ],
+    "final_l2": 0.15425912973139688
+  },
+  "adaptive_fix_note": "v1 adaptive refinement started from 100 points (below the starvation cliff at N=1000), causing the base model to be completely wrong before any refinement. Adaptive point selection used a failed model \u2014 every region showed high residual, making selection effectively random. Result: adaptive L2 ROSE from 2.5 to 3.4 over 10 rounds. v2 starts from 500 points (above cliff), pre-trains for 5000 epochs to reasonable convergence, then applies adaptive refinement. LR is reset to 0.0005 at the start of each round.",
+  "silent_failure_note": "convergence_curves.png shows N=50 and N=100 achieving LOWER training loss than N=1000 after 10000 epochs. Yet N=50/100 have L2 > 3.0 while N=1000 has L2=0.103. This is the starvation-cliff silent failure: the network memorizes a smooth function that exactly fits the sparse collocation points but completely fails on the full domain. Low training loss is a necessary but not sufficient condition for a correct PINN solution.",
+  "adaptive_l2_per_round": [
+    0.366110309193237,
+    0.31852798620511646,
+    0.30039582664503445,
+    0.24506975406263012,
+    0.24278599038836302,
+    0.22251255729630895,
+    0.2221295022308966,
+    0.23495562267881023,
+    0.23229113631292458,
+    0.23573866238200797
+  ],
+  "uniform_l2_per_round": [
+    0.36941183311566095,
+    0.24581002981473968,
+    0.21598025722081365,
+    0.19935090864631974,
+    0.18852276835140205,
+    0.17746837558055686,
+    0.1722693705285918,
+    0.1644853066317063,
+    0.15899167930957597,
+    0.15425912973139688
+  ],
+  "adaptive_point_counts": [
+    500,
+    600,
+    700,
+    800,
+    900,
+    1000,
+    1100,
+    1200,
+    1300,
+    1400,
+    1500
+  ],
+  "uniform_point_counts": [
+    500,
+    600,
+    700,
+    800,
+    900,
+    1000,
+    1100,
+    1200,
+    1300,
+    1400,
+    1500
+  ],
+  "adaptive_final_l2": 0.23573866238200797,
+  "uniform_final_l2": 0.15425912973139688
+}

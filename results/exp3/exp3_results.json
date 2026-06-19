@@ -1,0 +1,275 @@
+{
+  "experiment": "Width x Depth NTK Analysis",
+  "version": "v2-journal-ready",
+  "config": {
+    "beta": 50,
+    "widths": [
+      16,
+      32,
+      64,
+      128,
+      256
+    ],
+    "depths": [
+      2,
+      3,
+      4,
+      6,
+      8
+    ],
+    "activation": "tanh",
+    "n_epochs": 10000,
+    "ntk_n_points": 200,
+    "ntk_max_params": 50000,
+    "collapse_threshold_log10": 6.0,
+    "l2_failure_threshold": 0.1
+  },
+  "ntk_computation_note": "NTK eigenvalues computed AT INITIALIZATION (before any training). This characterizes the initial optimization landscape geometry. A separate model is then trained from the same architecture. The consistently high condition numbers (5.88e+09 to 7.16e+11) across all architectures indicate the landscape is pathologically ill-conditioned before any gradient steps are taken. Post-training NTK analysis is reserved for future work.",
+  "l2_matrix": [
+    [
+      1.1265918002734796,
+      1.0614525104089723,
+      0.9792662202621231,
+      0.9832206921414535,
+      0.9908794053410312
+    ],
+    [
+      1.0170356666727671,
+      0.9940165674006088,
+      0.9786617468980122,
+      0.9943384719058768,
+      0.9967350021277299
+    ],
+    [
+      1.0408025860789534,
+      0.9869989675580138,
+      0.9777589381571848,
+      0.9830550753628933,
+      0.9871850021443641
+    ],
+    [
+      1.012175847567546,
+      0.9718635746252444,
+      0.9817537449180864,
+      0.9804456562567473,
+      0.9779236339771873
+    ],
+    [
+      1.0089895968492169,
+      0.9700614062541226,
+      0.9685320584573456,
+      0.9744047620809413,
+      0.9910791366939149
+    ]
+  ],
+  "condition_number_matrix": [
+    [
+      109253976064.0,
+      17632020480.0,
+      13507728384.0,
+      15110043648.0,
+      66870489088.0
+    ],
+    [
+      15007909888.0,
+      6886471168.0,
+      15847181312.0,
+      26601689088.0,
+      7883149824.0
+    ],
+    [
+      17768609792.0,
+      58783911936.0,
+      13484160000.0,
+      17575219200.0,
+      715580112896.0
+    ],
+    [
+      47143120896.0,
+      11185731584.0,
+      15625668608.0,
+      5877443072.0,
+      21386221568.0
+    ],
+    [
+      25933060096.0,
+      376640569344.0,
+      10956749824.0,
+      10842856448.0,
+      12520589312.0
+    ]
+  ],
+  "log10_condition_number_matrix": [
+    [
+      11.038437251149714,
+      10.24630208163971,
+      10.130582319206365,
+      10.17926571890504,
+      10.825234499629945
+    ],
+    [
+      10.176320213437204,
+      9.837996733601937,
+      10.19995202686476,
+      10.424909213275528,
+      9.896699780724044
+    ],
+    [
+      10.24965345015493,
+      10.769258484018344,
+      10.129823897152043,
+      10.244900750317242,
+      11.85465826233258
+    ],
+    [
+      10.67341832964102,
+      10.048664393702047,
+      10.193838609503265,
+      9.769188431382396,
+      10.330134061958935
+    ],
+    [
+      10.413853766473485,
+      11.575927097660804,
+      10.039681745534907,
+      10.035143708089809,
+      10.097624770516648
+    ]
+  ],
+  "decay_exponent_matrix": [
+    [
+      3.270439208664642,
+      3.078017939298114,
+      3.079410374739984,
+      3.003166831698485,
+      2.9441870990140155
+    ],
+    [
+      3.112129371607268,
+      3.2009243426559175,
+      3.023093491612377,
+      3.0315004902564593,
+      2.8545382796428855
+    ],
+    [
+      3.159820181787965,
+      3.3840114231482956,
+      3.037076285257841,
+      2.864163420275473,
+      2.998839456758406
+    ],
+    [
+      3.2456616799001283,
+      3.1491390125169674,
+      3.1363590565091806,
+      2.835930986846381,
+      2.852267959926964
+    ],
+    [
+      3.18928216381797,
+      3.2777301703717865,
+      3.1663054645600193,
+      2.9800997358438464,
+      2.89097850813362
+    ]
+  ],
+  "matrix_labels": {
+    "rows": "depth=[2, 3, 4, 6, 8]",
+    "cols": "width=[16, 32, 64, 128, 256]",
+    "note": "row i = DEPTHS[i], col j = WIDTHS[j]"
+  },
+  "l2_summary": {
+    "min": 0.9685320584573456,
+    "max": 1.1265918002734796,
+    "mean": 0.9974091228165527,
+    "all_above_failure_threshold": true,
+    "note": "All 25 width\u00d7depth configurations fail with L2 > 0.1. L2 range [0.9685, 1.1266]. Capacity scaling does not alleviate the failure."
+  },
+  "condition_number_summary": {
+    "min_raw": 5877443072.0,
+    "max_raw": 715580112896.0,
+    "min_log10": 9.769188431382396,
+    "max_log10": 11.85465826233258,
+    "all_above_1e9": true,
+    "note": "All 25 configurations have \u03ba > 4\u00d710\u2079. The log\u2081\u2080 range [9.6, 11.1] looks dramatic on the heatmap but represents variation within the catastrophic regime \u2014 not a safe-to-unsafe transition. Dark cells (\u03ba \u2248 4\u00d710\u2079) and light cells (\u03ba \u2248 1.3\u00d710\u00b9\u00b9) are both catastrophically ill-conditioned."
+  },
+  "spectral_failure_boundary": {
+    "2": {
+      "all_widths_collapsed": true,
+      "collapsed_widths": [
+        16,
+        32,
+        64,
+        128,
+        256
+      ],
+      "safe_widths": [],
+      "boundary_width": null,
+      "note": "Entire tested width range [16\u2013256] collapsed. No safe architecture found within the tested range. boundary_width=None because there is no transition from safe to collapsed within [16, 32, 64, 128, 256]."
+    },
+    "3": {
+      "all_widths_collapsed": true,
+      "collapsed_widths": [
+        16,
+        32,
+        64,
+        128,
+        256
+      ],
+      "safe_widths": [],
+      "boundary_width": null,
+      "note": "Entire tested width range [16\u2013256] collapsed. No safe architecture found within the tested range. boundary_width=None because there is no transition from safe to collapsed within [16, 32, 64, 128, 256]."
+    },
+    "4": {
+      "all_widths_collapsed": true,
+      "collapsed_widths": [
+        16,
+        32,
+        64,
+        128,
+        256
+      ],
+      "safe_widths": [],
+      "boundary_width": null,
+      "note": "Entire tested width range [16\u2013256] collapsed. No safe architecture found within the tested range. boundary_width=None because there is no transition from safe to collapsed within [16, 32, 64, 128, 256]."
+    },
+    "6": {
+      "all_widths_collapsed": true,
+      "collapsed_widths": [
+        16,
+        32,
+        64,
+        128,
+        256
+      ],
+      "safe_widths": [],
+      "boundary_width": null,
+      "note": "Entire tested width range [16\u2013256] collapsed. No safe architecture found within the tested range. boundary_width=None because there is no transition from safe to collapsed within [16, 32, 64, 128, 256]."
+    },
+    "8": {
+      "all_widths_collapsed": true,
+      "collapsed_widths": [
+        16,
+        32,
+        64,
+        128,
+        256
+      ],
+      "safe_widths": [],
+      "boundary_width": null,
+      "note": "Entire tested width range [16\u2013256] collapsed. No safe architecture found within the tested range. boundary_width=None because there is no transition from safe to collapsed within [16, 32, 64, 128, 256]."
+    }
+  },
+  "boundary_note": "Collapse defined as log\u2081\u2080(\u03ba) > 6.0 (i.e. \u03ba > 10^6.0). Since all 25 configurations collapse, boundary_width=None for every depth \u2014 there is no safe-to-collapsed transition within the tested [16, 32, 64, 128, 256] width range. v1 incorrectly set boundary_width=16 (min of collapsed set) which falsely implied a boundary exists at W=16.",
+  "decay_exponent_summary": {
+    "min": 2.835930986846381,
+    "max": 3.3840114231482956,
+    "note": "Decay exponent \u03b1 \u2208 [2.89, 3.35]. Wider networks have slightly lower \u03b1 (less steep decay), but even \u03b1=2.89 (W=256) is far steeper than required to resolve high-frequency components at \u03b2=50. The improvement from W=16 (\u03b1=3.35) to W=256 (\u03b1=2.89) reduces the decay rate by ~14% \u2014 insufficient to overcome spectral failure."
+  },
+  "figure_notes": {
+    "l2_heatmap": "Linear scale L2 values. v1 applied log10 transform internally and displayed '-0.0' for most cells. v2 shows raw L2 with 4 decimal places. Reds colormap used because all values are failures \u2014 no green implied.",
+    "ntk_eigenvalue_heatmap": "log\u2081\u2080(\u03ba) values. Raw range annotation added to title to prevent misreading dark cells (\u03ba \u2248 4\u00d710\u2079) as safe. All cells are catastrophically ill-conditioned. NTK computed at initialization.",
+    "ntk_decay_heatmap": "Power-law decay exponent \u03b1 fitted to \u03bb\u2096 ~ k^{\u2212\u03b1} in log-log space. NTK computed at initialization. Title updated to state this explicitly.",
+    "eigenvalue_spectra": "Two-phase structure annotated: fast bulk decay (k < cliff) \u2192 spectral cliff \u2192 near-zero tail (k > cliff). Cliff detected automatically as maximum second-difference in log-space eigenvalue sequence. The near-zero tail region (\u03bb < 10\u207b\u2074) corresponds to high-frequency gradient directions that receive effectively zero weight in the gradient flow, directly explaining spectral bias at \u03b2=50."
+  }
+}

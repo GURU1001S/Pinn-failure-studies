@@ -1,0 +1,211 @@
+{
+  "experiment": "Temporal Extrapolation Failure Study",
+  "version": "v2-journal-ready",
+  "config": {
+    "beta": 10,
+    "seed": 42,
+    "T_train_list": [
+      0.5,
+      1.0,
+      2.0
+    ],
+    "T_eval": 10.0,
+    "n_hidden": 4,
+    "n_neurons": 128,
+    "n_epochs": 20000,
+    "error_thresholds": [
+      0.1,
+      0.5,
+      1.0
+    ],
+    "in_domain_fail_thresh": 0.1,
+    "r2_min": 0.5
+  },
+  "fix_notes": {
+    "fix1_t5_removed": "T_train=5.0 was in v1 but produced mean_error_in=0.52 \u2014 the model failed completely in-domain (\u03b2=10 over 5.0 requires ~8 wave oscillations, exceeding tanh PINN capacity). v2 excludes T_train configs with err_in > 0.1. Failed configs are still trained and reported but excluded from extrapolation figures.",
+    "fix2_r2_threshold": "v1 reported 'best fit: power_law' at R2=0.04\u20130.10. All three models fit essentially equally poorly on data that jumps to a plateau immediately after T_train. v2 requires R2 >= 0.5 to claim a reliable fit.",
+    "fix3_sentinel": "v1 returned T_EVAL=10.0 when threshold was never crossed, then R*=T_EVAL/T_train=20.0 appeared as a data point. v2 returns (None, False) when not crossed and plots open markers at T_EVAL to indicate 'never reached threshold'.",
+    "fix4_seed": "Explicit SEED=42 added.",
+    "fix5_labels": "Growth model labels now use (t\u2212T_train) notation to prevent misreading of slope on absolute-time x-axis."
+  },
+  "failed_in_domain": [],
+  "valid_for_extrap": [
+    0.5,
+    1.0,
+    2.0
+  ],
+  "per_T_train": {
+    "0.5": {
+      "in_domain_failed": false,
+      "mean_error_in": 0.0016327515684143562,
+      "mean_error_out": 0.7495672167168361,
+      "crossings": {
+        "0.1": {
+          "t_cross": 0.6298523485610926,
+          "crossed": true,
+          "r_star": 1.2597046971221852
+        },
+        "0.5": {
+          "t_cross": 0.7829959197846431,
+          "crossed": true,
+          "r_star": 1.5659918395692862
+        },
+        "1.0": {
+          "t_cross": null,
+          "crossed": false,
+          "r_star": null
+        }
+      },
+      "growth_fits": {
+        "linear": {
+          "params": [
+            0.008445937145740743,
+            0.7094437233194921
+          ],
+          "r2": 0.043781382359942556,
+          "label": "linear: 0.008\u00b7(t\u22120.5) + 0.709"
+        },
+        "exponential": {
+          "params": [
+            0.7117114695212432,
+            0.010819486956968525
+          ],
+          "r2": 0.04203156088317661,
+          "label": "exp: 0.712\u00b7e^(0.011\u00b7(t\u22120.5))"
+        },
+        "power_law": {
+          "params": [
+            0.6595333562512193,
+            0.0794337812933905
+          ],
+          "r2": 0.10794416747985747,
+          "label": "power: 0.660\u00b7((t\u22120.5)+1)^0.08"
+        },
+        "best": null,
+        "max_r2": 0.10794416747985747,
+        "reliable": false
+      },
+      "fit_reliable": false,
+      "fit_reason": "no_reliable_fit (max R\u00b2=0.108 < 0.5)",
+      "sharpness": {
+        "label": "gradual",
+        "ratio": 2.011964299313366
+      }
+    },
+    "1.0": {
+      "in_domain_failed": false,
+      "mean_error_in": 0.0013892966099839307,
+      "mean_error_out": 1.7264569660933942,
+      "crossings": {
+        "0.1": {
+          "t_cross": 1.1836105880322174,
+          "crossed": true,
+          "r_star": 1.1836105880322174
+        },
+        "0.5": {
+          "t_cross": 1.3209600139977424,
+          "crossed": true,
+          "r_star": 1.3209600139977424
+        },
+        "1.0": {
+          "t_cross": 1.4502395304166342,
+          "crossed": true,
+          "r_star": 1.4502395304166342
+        }
+      },
+      "growth_fits": {
+        "linear": {
+          "params": [
+            0.06251827958573247,
+            1.4450463642501217
+          ],
+          "r2": 0.21634434013816417,
+          "label": "linear: 0.063\u00b7(t\u22121.0) + 1.445"
+        },
+        "exponential": {
+          "params": [
+            1.482083917633238,
+            0.03315521773019378
+          ],
+          "r2": 0.1979408627881386,
+          "label": "exp: 1.482\u00b7e^(0.033\u00b7(t\u22121.0))"
+        },
+        "power_law": {
+          "params": [
+            1.25351001471185,
+            0.20169071990274384
+          ],
+          "r2": 0.3588787904119807,
+          "label": "power: 1.254\u00b7((t\u22121.0)+1)^0.20"
+        },
+        "best": null,
+        "max_r2": 0.3588787904119807,
+        "reliable": false
+      },
+      "fit_reliable": false,
+      "fit_reason": "no_reliable_fit (max R\u00b2=0.359 < 0.5)",
+      "sharpness": {
+        "label": "sudden",
+        "ratio": 13.204323137945432
+      }
+    },
+    "2.0": {
+      "in_domain_failed": false,
+      "mean_error_in": 0.07140556830340325,
+      "mean_error_out": 1.2003322945032628,
+      "crossings": {
+        "0.1": {
+          "t_cross": 2.0050125313283207,
+          "crossed": true,
+          "r_star": 1.0025062656641603
+        },
+        "0.5": {
+          "t_cross": 2.3107920936501913,
+          "crossed": true,
+          "r_star": 1.1553960468250957
+        },
+        "1.0": {
+          "t_cross": 2.4821041149642404,
+          "crossed": true,
+          "r_star": 1.2410520574821202
+        }
+      },
+      "growth_fits": {
+        "linear": {
+          "params": [
+            0.04796359847636436,
+            1.0083576910737622
+          ],
+          "r2": 0.2581738828679522,
+          "label": "linear: 0.048\u00b7(t\u22122.0) + 1.008"
+        },
+        "exponential": {
+          "params": [
+            1.0319991319535764,
+            0.0369151037693006
+          ],
+          "r2": 0.2383689252846749,
+          "label": "exp: 1.032\u00b7e^(0.037\u00b7(t\u22122.0))"
+        },
+        "power_law": {
+          "params": [
+            0.8895923232400231,
+            0.19979912091976346
+          ],
+          "r2": 0.4005730683432266,
+          "label": "power: 0.890\u00b7((t\u22122.0)+1)^0.20"
+        },
+        "best": null,
+        "max_r2": 0.4005730683432266,
+        "reliable": false
+      },
+      "fit_reliable": false,
+      "fit_reason": "no_reliable_fit (max R\u00b2=0.401 < 0.5)",
+      "sharpness": {
+        "label": "sudden",
+        "ratio": 10.142176967537011
+      }
+    }
+  },
+  "elapsed_seconds": 517.3969802856445
+}

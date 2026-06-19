@@ -1,0 +1,73 @@
+{
+  "experiment": "Causality Violation in Standard PINNs",
+  "version": "v2-journal-ready",
+  "config": {
+    "beta": 10,
+    "seed": 42,
+    "n_hidden": 4,
+    "n_neurons": 128,
+    "checkpoints": [
+      1000,
+      5000,
+      10000,
+      30000,
+      50000
+    ],
+    "n_epochs": 50000,
+    "n_time_bands": 20,
+    "causal_eps": 0.3,
+    "causal_steepness": 5.0,
+    "lag_threshold": 0.1
+  },
+  "fix_notes": {
+    "fix1_beta": "v1 used \u03b2=50 (confirmed complete spectral failure in Exp 1). Both models predicted u\u22610 (L2\u22480.83\u20131.44). Comparing two zero-function predictors cannot measure causality effects. v2 uses \u03b2=10 (marginal case, Exp 1 L2\u22480.035) where PINNs partially succeed and causality differences are visible.",
+    "fix2_weight_formula": "v1 used w[b] = w[b-1] * gate (cumulative product). With steepness=10, gate\u22480.007 for typical residuals, so w[3]\u22483\u00d710\u207b\u2077 \u2014 network trained only on t\u22480. v2 uses w[b] = sigmoid(steepness*(eps - residual_{b-1})) independently per band. No cascade multiplication.",
+    "fix3_causal_eps": "v1 CAUSAL_EPS=0.01. At \u03b2=50, PDE residuals are 0.1\u20131.0 early in training, so gate=sigmoid(10*(0.01-0.5))\u22480 always. v2 CAUSAL_EPS=0.3, giving a reachable threshold that gates open as training progresses.",
+    "fix4_seed": "Explicit seed=42 added for reproducibility.",
+    "fix5_lag_fallback": "If both models fail to bring error below LAG_THRESHOLD at any time t, the lag metric is stuck at T_MAX and uninformative. lag_metric_informative=False is flagged in results."
+  },
+  "final_mean_error": {
+    "standard": 0.008539827515823214,
+    "causal": 0.009025631002305537,
+    "improvement_pct": -5.68868031029086,
+    "causal_better": false
+  },
+  "causality_violation_fraction": {
+    "standard": 0.0,
+    "causal": 0.0
+  },
+  "lag_metric_informative": true,
+  "lag_metrics": {
+    "standard": {
+      "1000": 2.0,
+      "5000": 2.0,
+      "10000": 2.0,
+      "30000": 0.0,
+      "50000": 0.0
+    },
+    "causal": {
+      "1000": 2.0,
+      "5000": 2.0,
+      "10000": 2.0,
+      "30000": 0.0,
+      "50000": 0.0
+    }
+  },
+  "checkpoint_mean_errors": {
+    "standard": {
+      "1000": 0.8326915825010794,
+      "5000": 0.6609147040880985,
+      "10000": 0.5117933774167919,
+      "30000": 0.02687114651185904,
+      "50000": 0.008539827515823214
+    },
+    "causal": {
+      "1000": 0.9852889880134631,
+      "5000": 0.6619148874762049,
+      "10000": 0.576248035145117,
+      "30000": 0.04401652448824023,
+      "50000": 0.009025631002305537
+    }
+  },
+  "elapsed_seconds": 1392.5239844322205
+}

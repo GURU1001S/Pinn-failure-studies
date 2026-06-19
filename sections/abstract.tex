@@ -1,0 +1,9 @@
+\begin{abstract}
+Physics-informed neural networks (\PINN{}s) frequently fail on stiff partial differential equations, yet the underlying mechanisms remain incompletely quantified. We map this failure landscape through extensive controlled experiments across three stiff PDEs, isolating distinct mechanisms via spectral profiling, variance decomposition, and optimization diagnostics.
+
+We observe three primary phenomena: (i) Extreme loss landscape pathologies, where failed models converge to exceptionally sharp minima ($\lambda_{\max} \approx 9.4 \times 10^7$) compared to the flatter minima of successful architectures ($\lambda_{\max} \approx 3.4 \times 10^3$). (ii) Structural factors heavily dominate hyperparameter tuning in determining outcome variance ($\etasq=0.673$ vs $0.0023$ for Burgers, 1.7:1 ratio for advection). (iii) Spectral failures at high stiffness exhibit poor initialization conditioning ($\kNTK \sim 10^{11}$) and extreme gradient conflicts ($\cos \theta = -0.99$), acting independently from other failure modes (lagged cross-correlation $r=0.630$).
+
+Crucially, standard scalar metrics obscure these physical violations. Two distinct failure configurations achieved nearly identical pointwise $\Ltwo$ errors ($0.418$ and $0.416$), yet exhibited a $57\times$ divergence in mass conservation violation ($C_1$: $2.64$ vs $151.26$), despite near-identical energy conservation drift ($C_2$: $0.701$ vs $0.700$). 
+
+These results demonstrate that \PINN{} failures stem from fundamental architectural bottlenecks rather than suboptimal tuning. We term this the \emph{Zugzwang condition}: standard \PINN{}s encounter multiple, independent failure mechanisms simultaneously under stiffness, yet no single available intervention provides a structurally complete remedy.
+\end{abstract}

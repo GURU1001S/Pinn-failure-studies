@@ -1,0 +1,201 @@
+{
+  "experiment": "Collocation Sampling Strategy",
+  "version": "v2-journal-ready",
+  "config": {
+    "n_hidden": 4,
+    "n_neurons": 64,
+    "n_epochs": 10000,
+    "n_seeds": 20,
+    "n_int": 2000,
+    "n_bc": 400,
+    "l2_failure_threshold": 0.1,
+    "sampling_methods": [
+      "random",
+      "lhs",
+      "sobol",
+      "halton"
+    ]
+  },
+  "l2_errors": {
+    "random": [
+      0.06137240216859373,
+      0.034905247463347784,
+      0.03789839985206432,
+      0.04120192641993285,
+      0.027851724458088437,
+      0.02779079446928369,
+      0.05398791664170882,
+      0.05334723952063326,
+      0.054395648877873605,
+      0.030054231978414944,
+      0.03921113514652488,
+      0.10894224757249188,
+      0.05403488397020582,
+      0.06106382775287885,
+      0.04349137826106923,
+      0.0402528128146376,
+      0.04331968744684168,
+      0.06333650113390064,
+      0.03847148163875898,
+      0.04204416627223335
+    ],
+    "lhs": [
+      0.08767761231354054,
+      0.11171040140188303,
+      0.041342891151644155,
+      0.04309697892618515,
+      0.06563206486985927,
+      0.03759019052288334,
+      0.03681899919365851,
+      0.17183613597352446,
+      0.0507995161273845,
+      0.06426497649210383,
+      0.04729085151026314,
+      0.03978273684577628,
+      0.0381336858318468,
+      0.11169295084467733,
+      0.03561240726480247,
+      0.0328182894881046,
+      0.10721195733080545,
+      0.04929951215898706,
+      0.09027749048658978,
+      0.045404097461982144
+    ],
+    "sobol": [
+      0.03968305098796831,
+      0.04438454366781317,
+      0.08602755542555991,
+      0.06589038655679065,
+      0.038377641514073746,
+      0.045745888044267664,
+      0.06009914882883701,
+      0.03941750503248244,
+      0.02994303261757722,
+      0.06153146159304211,
+      0.04974027128275934,
+      0.04129122345830371,
+      0.04720912855154864,
+      0.03126089724071258,
+      0.04845864523294311,
+      0.059217443023769384,
+      0.037511209660670015,
+      0.10208690156220798,
+      0.09336895649822186,
+      0.036849989061825746
+    ],
+    "halton": [
+      0.03854784200668845,
+      0.06923336827497302,
+      0.07018891216433244,
+      0.059748816885654185,
+      0.04605185183717572,
+      0.07451623749001479,
+      0.034861686079787395,
+      0.04430354323173465,
+      0.051448084679988536,
+      0.05436136330819353,
+      0.10392983919321012,
+      0.03742274529964067,
+      0.06786115814226183,
+      0.05351433159060439,
+      0.06161605326332634,
+      0.03878003963858973,
+      0.04624875228662446,
+      0.08180010117198207,
+      0.07832613262987066,
+      0.043003370585749816
+    ]
+  },
+  "summary_statistics": {
+    "random": {
+      "mean": 0.04784868269297422,
+      "median": 0.04268192685953751,
+      "variance": 0.00031009348977212054,
+      "std": 0.01760947159264356,
+      "min": 0.02779079446928369,
+      "max": 0.10894224757249188,
+      "n_failures": 1,
+      "failure_rate_pct": 5.0
+    },
+    "lhs": {
+      "mean": 0.06541468730982508,
+      "median": 0.0482951818346251,
+      "variance": 0.001284813545779419,
+      "std": 0.035844295861118806,
+      "min": 0.0328182894881046,
+      "max": 0.17183613597352446,
+      "n_failures": 4,
+      "failure_rate_pct": 20.0
+    },
+    "sobol": {
+      "mean": 0.05290474399206872,
+      "median": 0.04647750829790816,
+      "variance": 0.000393356049771214,
+      "std": 0.019833205736118756,
+      "min": 0.02994303261757722,
+      "max": 0.10208690156220798,
+      "n_failures": 1,
+      "failure_rate_pct": 5.0
+    },
+    "halton": {
+      "mean": 0.057788211488020144,
+      "median": 0.05393784744939896,
+      "variance": 0.00031126995499116186,
+      "std": 0.017642844299918362,
+      "min": 0.034861686079787395,
+      "max": 0.10392983919321012,
+      "n_failures": 1,
+      "failure_rate_pct": 5.0
+    }
+  },
+  "rankings": {
+    "lowest_variance": "random",
+    "lowest_mean": "random",
+    "recommended": null,
+    "recommendation_basis": "No categorical winner: RANDOM has lower mean L2 (0.0478 vs 0.0529), SOBOL has lower variance (3.93e-04 vs 3.10e-04), but variance difference is NOT statistically significant at p<0.05. Choose based on application priority: accuracy \u2192 RANDOM, reproducibility \u2192 SOBOL."
+  },
+  "variance_significance_tests": {
+    "levene_all_strategies": {
+      "statistic": 1.963021628308884,
+      "p_value": 0.12666324613689733,
+      "significant_p05": false,
+      "interpretation": "No significant difference in variances across all strategies at p<0.05."
+    },
+    "levene_random_vs_sobol": {
+      "statistic": 0.29969477309672254,
+      "p_value": 0.5872750166393532,
+      "significant_p05": false,
+      "interpretation": "RANDOM and SOBOL variances are NOT significantly different at p<0.05 \u2014 declaring Sobol categorically better is not supported statistically. Report as a trade-off, not a winner."
+    },
+    "levene_sobol_vs_lhs": {
+      "statistic": 2.066080727223093,
+      "p_value": 0.15879212600113093,
+      "significant_p05": false,
+      "interpretation": "SOBOL and LHS variances not significantly different."
+    }
+  },
+  "lhs_failure_note": "LHS produced 4/20 seeds (20%) with L2 > 0.1. This is the most practically important finding: LHS has structural instability that produces catastrophic outliers on 15% of runs. For practitioners, this means LHS is unreliable despite its theoretical stratification guarantees \u2014 the grid-based randomization can leave critical high-residual regions under-sampled in a minority of seed configurations.",
+  "residual_heatmap_note": "v1 showed BEST model residuals (lowest L2 per strategy) but titled panels with MEAN L2 \u2014 a mismatch. v2 shows MEDIAN model (seed whose L2 is closest to the per-strategy median) with that model's actual L2 in the title. v1 used independent colorbars making comparison impossible. v2 uses a shared scale (95th percentile clipping) so the same color = same residual magnitude across all panels.",
+  "strategy_comparison_note": "v1 showed three bar charts (mean, std, variance) where std and variance are the same information shown twice. v2 replaces these with a single (mean L2, variance) scatter plot showing the full accuracy-vs-reliability trade-off. RANDOM and SOBOL occupy different positions on the Pareto frontier \u2014 neither dominates the other.",
+  "means": {
+    "random": 0.04784868269297422,
+    "lhs": 0.06541468730982508,
+    "sobol": 0.05290474399206872,
+    "halton": 0.057788211488020144
+  },
+  "variances": {
+    "random": 0.00031009348977212054,
+    "lhs": 0.001284813545779419,
+    "sobol": 0.000393356049771214,
+    "halton": 0.00031126995499116186
+  },
+  "lowest_variance_method": "random",
+  "n_seeds": 20,
+  "n_epochs": 10000,
+  "sampling_methods": [
+    "random",
+    "lhs",
+    "sobol",
+    "halton"
+  ]
+}

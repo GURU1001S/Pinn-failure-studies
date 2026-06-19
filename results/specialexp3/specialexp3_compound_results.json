@@ -1,0 +1,158 @@
+{
+  "experiment": "Compound Failure Interaction Study",
+  "version": "specialexp3",
+  "config": {
+    "beta_failure": 30,
+    "beta_control": 1,
+    "n_epochs": 50000,
+    "n_hidden": 4,
+    "n_neurons": 64,
+    "track_every": 500,
+    "ntk_every": 5000,
+    "ntk_n_points": 50,
+    "seed": 42
+  },
+  "failure_thresholds": {
+    "spectral_score": 0.5,
+    "grad_ratio": 10.0,
+    "ntk_condition": 100000000.0,
+    "weight_norm_growth": 3.0,
+    "saturation": 0.3
+  },
+  "failure_diagnostics": {
+    "final_l2": 0.7671839297350521,
+    "onset_epochs": {
+      "Spectral Score": 0,
+      "Gradient Ratio": 0,
+      "Weight Norm (rel)": null,
+      "Saturation": 12000,
+      "NTK Condition": 0
+    },
+    "causal_chain": "Spectral Score(ep=0) \u2192 Gradient Ratio(ep=0) \u2192 NTK Condition(ep=0) \u2192 Saturation(ep=12000)",
+    "spectral_grad_correlation": 0.19914612979931196,
+    "spectral_grad_p_value": 0.046992520316263414,
+    "coupling_verdict": "INDEPENDENT"
+  },
+  "control_diagnostics": {
+    "final_l2": 0.00027342218072636817,
+    "onset_epochs": {
+      "Spectral Score": 0,
+      "Gradient Ratio": null,
+      "Weight Norm (rel)": null,
+      "Saturation": null,
+      "NTK Condition": null
+    }
+  },
+  "correlation_matrix_failure": [
+    [
+      1.0,
+      0.19914612979931196,
+      0.26214535216543194,
+      -0.57920968145711,
+      -0.7602260734113875
+    ],
+    [
+      0.19914612979931196,
+      1.0,
+      0.496907869794858,
+      -0.4024752137770683,
+      -0.22866440292799187
+    ],
+    [
+      0.26214535216543194,
+      0.496907869794858,
+      1.0,
+      -0.17160370610307574,
+      -0.10676440161121492
+    ],
+    [
+      -0.57920968145711,
+      -0.4024752137770683,
+      -0.17160370610307574,
+      1.0,
+      0.8793756111236213
+    ],
+    [
+      -0.7602260734113875,
+      -0.22866440292799187,
+      -0.10676440161121492,
+      0.8793756111236213,
+      1.0
+    ]
+  ],
+  "correlation_matrix_control": [
+    [
+      1.0,
+      0.008635452300099182,
+      0.13409343879266528,
+      -0.4927731678158581,
+      -0.3525998858951655
+    ],
+    [
+      0.008635452300099182,
+      1.0,
+      -0.11193627251751774,
+      0.1289870591354645,
+      0.1429530939739135
+    ],
+    [
+      0.13409343879266528,
+      -0.11193627251751774,
+      1.0,
+      -0.06431759363195057,
+      -0.03718055469059523
+    ],
+    [
+      -0.4927731678158581,
+      0.1289870591354645,
+      -0.06431759363195057,
+      1.0,
+      0.9797738016258298
+    ],
+    [
+      -0.3525998858951655,
+      0.1429530939739135,
+      -0.03718055469059523,
+      0.9797738016258298,
+      1.0
+    ]
+  ],
+  "p_value_matrix_failure": [
+    [
+      0.0,
+      0.046992520316263414,
+      0.008420136374439374,
+      2.7348515928990117e-10,
+      4.616463294280624e-20
+    ],
+    [
+      0.046992520316263414,
+      0.0,
+      1.4516174101009806e-07,
+      3.308503659722122e-05,
+      0.022119906266686834
+    ],
+    [
+      0.008420136374439374,
+      1.4516174101009806e-07,
+      0.0,
+      0.08779409340476983,
+      0.290399157688194
+    ],
+    [
+      2.7348515928990117e-10,
+      3.308503659722122e-05,
+      0.08779409340476983,
+      0.0,
+      2.3810443271144738e-33
+    ],
+    [
+      4.616463294280624e-20,
+      0.022119906266686834,
+      0.290399157688194,
+      2.3810443271144738e-33,
+      0.0
+    ]
+  ],
+  "compound_failure_note": "Spectral bias and gradient pathology at \u03b2=30: Pearson r=0.199 (p=0.0470). Verdict: INDEPENDENT. These are TWO independent failure modes that co-occur. Causal chain: Spectral Score(ep=0) \u2192 Gradient Ratio(ep=0) \u2192 NTK Condition(ep=0) \u2192 Saturation(ep=12000)."
+}

@@ -1,0 +1,245 @@
+{
+  "experiment": "Burgers Failure Mode Phase Diagram",
+  "version": "v2-journal-ready",
+  "config": {
+    "nu_values": [
+      0.1,
+      0.07196856730011521,
+      0.05179474679231213,
+      0.0372759372031494,
+      0.02682695795279726,
+      0.019306977288832506,
+      0.013894954943731374,
+      0.01,
+      0.0071968567300115215,
+      0.005179474679231213,
+      0.0037275937203149418,
+      0.002682695795279727,
+      0.0019306977288832496,
+      0.001389495494373139,
+      0.001
+    ],
+    "nu_min": 0.001,
+    "nu_max": 0.1,
+    "n_nu_values": 15,
+    "n_epochs": 20000,
+    "seed": 42,
+    "failure_codes": {
+      "A": "successful_convergence",
+      "B": "spectral_bias",
+      "C": "gradient_pathology",
+      "D": "collocation_starvation",
+      "E": "optimization_divergence",
+      "U": "unclassified"
+    },
+    "thresholds": {
+      "l2_success": 0.05,
+      "grad_ratio": 50.0,
+      "spectral": 0.3,
+      "shock_conc": 2.5,
+      "diverge": 10.0
+    }
+  },
+  "fix_notes": {
+    "fix1_classifier": "v1 used binary flags (0/1) per mode; max() picked alphabetically when multiple fired. v2 uses normalized continuous scores: (signal-thresh)/thresh. Also adds 'U' (unclassified) fallback instead of defaulting to 'B'.",
+    "fix2_reference_solver": "v1 used fixed dt=output_dt=0.01, exceeding diffusion stability limit dt \u2264 dx\u00b2/(2\u03bd) at \u03bd \u2264 0.001. v2 uses adaptive dt = min(CFL\u00d7dx/u_max, 0.4\u00d7dx\u00b2/(2\u03bd)), sub-stepping within each output interval. \u03bd sweep capped at 0.001 where solver remains reliable. For \u03bd < 0.001, Cole-Hopf transform reference is recommended.",
+    "fix3_seed": "Explicit seed=42+idx per \u03bd for reproducibility.",
+    "fix4_spectral": "v1 used FFT(u_pred) \u2014 correct near-shock predictions have high-freq content and were misclassified as spectral_bias. v2 uses FFT(u_pred - u_exact)/||u_exact||\u2082 \u2014 measures error frequency content, not prediction frequency content.",
+    "fix5_shock_gradient": "v1 passed .unsqueeze(1) of requires_grad tensors which disconnected autograd \u2014 PDE residual was zero everywhere, shock_concentration always 0, mode D never fired. v2 constructs fresh x_col, t_col tensors and validates non-zero residual before computing concentration."
+  },
+  "per_nu": [
+    {
+      "nu": 0.1,
+      "failure_code": "A",
+      "failure_name": "successful_convergence",
+      "l2_error": 0.009354734368320248,
+      "diverged": false,
+      "grad_ratio": 7.5162203219135195,
+      "spectral_ratio": 0.003361922352365664,
+      "shock_concentration": 1.0286738872528076,
+      "classifier_scores": {}
+    },
+    {
+      "nu": 0.07196856730011521,
+      "failure_code": "A",
+      "failure_name": "successful_convergence",
+      "l2_error": 0.011017708614258442,
+      "diverged": false,
+      "grad_ratio": 21.08041872448761,
+      "spectral_ratio": 0.0038757283136508554,
+      "shock_concentration": 1.410264253616333,
+      "classifier_scores": {}
+    },
+    {
+      "nu": 0.05179474679231213,
+      "failure_code": "A",
+      "failure_name": "successful_convergence",
+      "l2_error": 0.012525645287961483,
+      "diverged": false,
+      "grad_ratio": 6.101803495526787,
+      "spectral_ratio": 0.0026429060939744593,
+      "shock_concentration": 1.6825305223464966,
+      "classifier_scores": {}
+    },
+    {
+      "nu": 0.0372759372031494,
+      "failure_code": "A",
+      "failure_name": "successful_convergence",
+      "l2_error": 0.014632523788580865,
+      "diverged": false,
+      "grad_ratio": 49.489969578002,
+      "spectral_ratio": 0.0015720595214124122,
+      "shock_concentration": 1.6507505178451538,
+      "classifier_scores": {}
+    },
+    {
+      "nu": 0.02682695795279726,
+      "failure_code": "A",
+      "failure_name": "successful_convergence",
+      "l2_error": 0.016599547825441055,
+      "diverged": false,
+      "grad_ratio": 16.398435275030362,
+      "spectral_ratio": 0.0011794302568990792,
+      "shock_concentration": 1.8813060522079468,
+      "classifier_scores": {}
+    },
+    {
+      "nu": 0.019306977288832506,
+      "failure_code": "A",
+      "failure_name": "successful_convergence",
+      "l2_error": 0.01852861573318432,
+      "diverged": false,
+      "grad_ratio": 12.400968352629075,
+      "spectral_ratio": 0.0013326778101995856,
+      "shock_concentration": 1.9922407865524292,
+      "classifier_scores": {}
+    },
+    {
+      "nu": 0.013894954943731374,
+      "failure_code": "A",
+      "failure_name": "successful_convergence",
+      "l2_error": 0.018884214871385956,
+      "diverged": false,
+      "grad_ratio": 99.43285857170599,
+      "spectral_ratio": 0.0024876838553691224,
+      "shock_concentration": 2.8468925952911377,
+      "classifier_scores": {}
+    },
+    {
+      "nu": 0.01,
+      "failure_code": "A",
+      "failure_name": "successful_convergence",
+      "l2_error": 0.021104314044423002,
+      "diverged": false,
+      "grad_ratio": 56.401114525300805,
+      "spectral_ratio": 0.007058322687933264,
+      "shock_concentration": 2.5720019340515137,
+      "classifier_scores": {}
+    },
+    {
+      "nu": 0.0071968567300115215,
+      "failure_code": "A",
+      "failure_name": "successful_convergence",
+      "l2_error": 0.02275262655098519,
+      "diverged": false,
+      "grad_ratio": 50.657250188114354,
+      "spectral_ratio": 0.016128817868679632,
+      "shock_concentration": 2.5979809761047363,
+      "classifier_scores": {}
+    },
+    {
+      "nu": 0.005179474679231213,
+      "failure_code": "A",
+      "failure_name": "successful_convergence",
+      "l2_error": 0.024408753780737803,
+      "diverged": false,
+      "grad_ratio": 298.78778929108097,
+      "spectral_ratio": 0.030774429886361417,
+      "shock_concentration": 3.1337361335754395,
+      "classifier_scores": {}
+    },
+    {
+      "nu": 0.0037275937203149418,
+      "failure_code": "A",
+      "failure_name": "successful_convergence",
+      "l2_error": 0.025386506449616493,
+      "diverged": false,
+      "grad_ratio": 173.39708040428866,
+      "spectral_ratio": 0.0514074914654265,
+      "shock_concentration": 2.5351014137268066,
+      "classifier_scores": {}
+    },
+    {
+      "nu": 0.002682695795279727,
+      "failure_code": "C",
+      "failure_name": "gradient_pathology",
+      "l2_error": 0.0594441866289485,
+      "diverged": false,
+      "grad_ratio": 201.23511675038569,
+      "spectral_ratio": 0.08086803644795047,
+      "shock_concentration": 3.295586585998535,
+      "classifier_scores": {
+        "C": 3.0247023350077136,
+        "B": 0.0,
+        "D": 0.3182346343994141
+      }
+    },
+    {
+      "nu": 0.0019306977288832496,
+      "failure_code": "C",
+      "failure_name": "gradient_pathology",
+      "l2_error": 0.09347165581198631,
+      "diverged": false,
+      "grad_ratio": 388.05932185076733,
+      "spectral_ratio": 0.11416043209739779,
+      "shock_concentration": 3.369739294052124,
+      "classifier_scores": {
+        "C": 6.761186437015347,
+        "B": 0.0,
+        "D": 0.3478957176208496
+      }
+    },
+    {
+      "nu": 0.001389495494373139,
+      "failure_code": "C",
+      "failure_name": "gradient_pathology",
+      "l2_error": 0.1537653764722416,
+      "diverged": false,
+      "grad_ratio": 349.9633179546857,
+      "spectral_ratio": 0.12561746150342104,
+      "shock_concentration": 3.1730098724365234,
+      "classifier_scores": {
+        "C": 5.999266359093713,
+        "B": 0.0,
+        "D": 0.26920394897460936
+      }
+    },
+    {
+      "nu": 0.001,
+      "failure_code": "C",
+      "failure_name": "gradient_pathology",
+      "l2_error": 0.27472584314010723,
+      "diverged": false,
+      "grad_ratio": 408.4459684498259,
+      "spectral_ratio": 0.13669666355257848,
+      "shock_concentration": 3.387554168701172,
+      "classifier_scores": {
+        "C": 7.168919368996518,
+        "B": 0.0,
+        "D": 0.35502166748046876
+      }
+    }
+  ],
+  "transitions": [
+    {
+      "from_code": "A",
+      "to_code": "C",
+      "from_name": "successful_convergence",
+      "to_name": "gradient_pathology",
+      "nu_lower": 0.0037275937203149418,
+      "nu_upper": 0.002682695795279727,
+      "nu_midpoint": 0.0031622776601683807
+    }
+  ],
+  "elapsed_seconds": 4410.228034257889
+}

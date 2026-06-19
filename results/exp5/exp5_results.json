@@ -1,0 +1,86 @@
+{
+  "experiment": "Loss Landscape Analysis",
+  "version": "v2-journal-ready",
+  "config": {
+    "n_hidden": 4,
+    "n_neurons": 64,
+    "n_epochs": 20000,
+    "grid_size": 50,
+    "alpha_range": [
+      -1.0,
+      1.0
+    ],
+    "n_hessian_runs": 5,
+    "hessian_n_iters": 25
+  },
+  "model_definitions": {
+    "failed": {
+      "init_strategy": "normal_sigma_1.0",
+      "init_std": 1.0,
+      "n_epochs": 20000,
+      "l2_error": 1.305023570682894,
+      "failure_confirmed": true,
+      "note": "Normal(\u03c3=1.0) init causes tanh neurons to saturate immediately (output \u2248 \u00b11), collapsing gradient flow. The model converges to a wrong local minimum after 20000 epochs \u2014 this is GENUINE failure, not under-training. v1 used 2000-epoch under-trained model which is not a valid failure case (would succeed given more epochs)."
+    },
+    "success": {
+      "init_strategy": "xavier_normal",
+      "seed": 0,
+      "n_epochs": 20000,
+      "l2_error": 0.09039513659480418,
+      "note": "Standard Xavier initialization with the same 20000-epoch training budget as the failed model. Both models use identical architecture, optimizer, and LR schedule. The ONLY difference is initialization."
+    }
+  },
+  "sharpness": {
+    "failed": {
+      "mean": 93968923.2,
+      "std": 97965534.59873392,
+      "samples": [
+        203591328.0,
+        13796824.0,
+        8577088.0,
+        223638016.0,
+        20241360.0
+      ],
+      "n_runs": 5
+    },
+    "success": {
+      "mean": 3362.434375,
+      "std": 810.8530651233806,
+      "samples": [
+        1835.431640625,
+        3307.718994140625,
+        4106.978515625,
+        3935.789306640625,
+        3626.25341796875
+      ],
+      "n_runs": 5
+    },
+    "significant_2sigma": false,
+    "inversion_confirmed": false,
+    "inversion_direction": "failed_sharper_or_equal",
+    "significance_note": "Two-sigma confidence intervals [93968923.2\u00b1195931069.2] vs [3362.4\u00b11621.7] OVERLAP \u2014 result is NOT statistically significant at 2\u03c3. Increase N_HESSIAN_RUNS or use stronger failure contrast.",
+    "v1_note": "v1 ran power iteration once per model (no uncertainty). v2 runs 5 independent seeds and reports mean \u00b1 std. Single-run \u03bb_max estimates can vary 20\u201330% due to random initialization of the eigenvector probe v."
+  },
+  "landscape": {
+    "grid_size": 50,
+    "alpha_range": [
+      -1.0,
+      1.0
+    ],
+    "colorbar_note": "v1 landscape_comparison.png used independent colorbars per panel \u2014 same color encoded different log\u2081\u2080(loss) values in each panel, making comparison meaningless. v2 uses shared vmin/vmax across both surfaces so the same color = same log\u2081\u2080(loss) in both panels."
+  },
+  "figure_notes": {
+    "landscape_3d": "z-axis shows log\u2081\u2080(loss). Downward spike at center = low loss at the converged minimum (GOOD). This is NOT the same as Hessian sharpness. Hessian \u03bb_max quantifies LOCAL curvature at the minimum via power iteration on the Hessian-vector product. The 3D landscape shows GLOBAL loss variation across \u03b1 \u2208 [\u22121, 1] filter-normalized parameter perturbations. A model can have a visually 'deep spike' (low minimum) in the 3D plot AND high \u03bb_max (sharp local curvature) simultaneously \u2014 they measure different geometric properties.",
+    "sharpness_report": "Error bars show \u00b12\u03c3 from 5 independent power iteration runs. Individual run values shown as dots. Significance assessed by non-overlap of 2\u03c3 confidence intervals. Counter-intuitive finding: failed model has LOWER \u03bb_max (flatter landscape) than successful model, contradicting standard ML flat-minima generalization theory. In PINNs, flat minima can be sub-optimal basins where physics and BCs remain unresolved."
+  },
+  "failed_model_l2": 1.305023570682894,
+  "success_model_l2": 0.09039513659480418,
+  "sharpness_failed": 93968923.2,
+  "sharpness_success": 3362.434375,
+  "correlation": "sharp",
+  "landscape_grid_size": 50,
+  "landscape_alpha_range": [
+    -1.0,
+    1.0
+  ]
+}

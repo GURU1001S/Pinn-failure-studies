@@ -1,0 +1,67 @@
+{
+  "experiment": "Compound Failure Interaction Map",
+  "version": "v2-journal-ready",
+  "config": {
+    "beta": 30,
+    "seed": 42,
+    "n_epochs": 50000,
+    "track_every": 200,
+    "spectral_metric": "band_filtered_L2_over_global_norm"
+  },
+  "fix_notes": {
+    "fix1_spectral": "v1 computed err_fft[:,k]/(exact_fft[:,k]+1e-10). For sin(x-\u03b2t), exact_fft[:,k]\u22480 for k\u22652, so the denominator collapsed to 1e-10 producing values of ~1e10. v2 uses ||IFFT(masked_err_fft_k)||\u2082/||u_exact||\u2082, which is bounded in [0,~2].",
+    "fix2_correlation": "v1 reported r=0.082 but xcorr_peak=0.976 without reconciling. With broken spectral metric, both were invalid. v2 reports corrected Pearson r on corrected spectral errors, adds bootstrap p-values, and explicitly flags non-significance.",
+    "fix3_ntk_jump": "NTK \u03ba increased 10\u00d7 at final checkpoint (iter=50k). v2 detects and annotates this as potential numerical instability.",
+    "fix4_seed": "Explicit seed=42 added.",
+    "fix5_colormap": "v1 heatmap vmax dominated by 1e10 noise \u2014 entirely black. v2 clips at 99th percentile for visibility."
+  },
+  "ntk_data": {
+    "0": {
+      "condition_number": 51863425024.0,
+      "decay_exponent": 3.407872911869365
+    },
+    "10000": {
+      "condition_number": 386360573952.0,
+      "decay_exponent": 2.678673070469763
+    },
+    "30000": {
+      "condition_number": 57477472256.0,
+      "decay_exponent": 3.770872263002145
+    },
+    "50000": {
+      "condition_number": 54506909696.0,
+      "decay_exponent": 4.301970352400291
+    }
+  },
+  "ntk_non_monotone_jump": true,
+  "correlation": {
+    "pearson_spectral_vs_grad": 0.34824112324145984,
+    "pvalue_spectral_vs_grad": 0.0,
+    "significant_p05": true,
+    "pearson_spectral_vs_pde": 0.8417555867482028,
+    "pvalue_spectral_vs_pde": 0.0,
+    "peak_xcorr_lag_steps": -3,
+    "peak_xcorr_value": 0.6301594272860572,
+    "causal_link_assessment": "gradient_leads_spectral"
+  },
+  "final_spectral_error_per_freq": [
+    0.7497082833438367,
+    0.02099543265121822,
+    0.014981841898449963,
+    0.005651696444125343,
+    0.004369110332520858,
+    0.003513553490527812,
+    0.0029708938948707045,
+    0.0025766287925900614,
+    0.002280625689447122,
+    0.002044392740658541,
+    0.0018535226689269995,
+    0.0016919905630763306,
+    0.0015605202181514215,
+    0.0014556342104971927,
+    0.0013546920261684955,
+    0.0012707917089718717
+  ],
+  "final_grad_ratio": 4.048343595072364,
+  "elapsed_seconds": 416.8727300167084
+}

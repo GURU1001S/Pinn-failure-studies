@@ -1,0 +1,267 @@
+=== EXPERIMENTS OVERVIEW ===
+--- exp1_spectral_bias.py ---
+exp1_spectral_bias.py — Experiment 1: Spectral Bias vs. β  [v2 — fixed]
+
+Trains standard 4-layer tanh PINNs on the 1D advection equation
+u_t + β*u_x = 0 for β ∈ [1, 5, 10, 30, 50, 100].
+
+For each β:
+  1. Train PINN (4 hidden layers, 64 neurons, tanh, 15k Adam steps)
+  2. Evaluate on 256×100 test grid
+  3. Compute spatial Fourier spectrum at t=1.0
+  4. Find cutoff frequency where PINN spectrum diverges from exact
+No JSON results found for exp1
+
+--- exp2_activation_study.py ---
+exp2_activation_study.py — Experiment 2: Activation Function Mitigation
+[v2 — journal-ready fixes]
+
+Takes the failure cases from Experiment 1 (β where L2 > 10%) and
+systematically varies the activation function:
+  - tanh (baseline)
+  - sin (SIREN-style)
+  - swish (SiLU)
+  - GELU
+  - FourierFeatures(σ=1)  + tanh body
+No JSON results found for exp2
+
+--- exp3_ntk_analysis.py ---
+exp3_ntk_analysis.py — Experiment 3: Width × Depth NTK Analysis
+[v2 — journal-ready fixes]
+
+Measures how network width and depth independently affect spectral bias
+failure on the 1D advection equation at β=50.
+
+Protocol:
+  1. For each (width, depth) in [16,32,64,128,256] × [2,3,4,6,8]:
+     a. Construct a tanh PINN
+     b. Compute empirical NTK eigenvalue spectrum AT INITIALIZATION
+No JSON results found for exp3
+
+--- exp4_gradient_pathology.py ---
+exp4_gradient_pathology.py — Gradient Pathology Experiment (Wang et al. 2021)
+[v2 — journal-ready fixes]
+
+Trains a PINN on 1D Burgers equation. Every 1000 iterations, records
+gradient magnitudes of PDE, BC, and IC loss components independently.
+Plots gradient magnitude ratio (PDE/BC) over training.
+Repeats with lambda_BC ∈ [0.1, 1, 10, 100].
+
+Outputs (results/exp4/):
+  - gradient_ratio_baseline.png
+No JSON results found for exp4
+
+--- exp5_loss_landscape.py ---
+exp5_loss_landscape.py — Loss Landscape Analysis (Li et al. 2018)
+[v2 — journal-ready fixes]
+
+Using a GENUINELY FAILED and a successful Burgers PINN:
+  1. Apply filter-normalized random directions (Li et al. 2018)
+  2. Compute loss surface on 50×50 grid in 2D parameter subspace
+  3. Generate 3D loss landscape plots with clarifying annotations
+  4. Compare sharpness via Hessian max eigenvalue (power iteration,
+     5 independent runs per model → mean ± std with error bars)
+
+No JSON results found for exp5
+
+--- exp6_gradient_flow.py ---
+exp6_gradient_flow.py — Gradient Flow & Conflict Analysis
+[v2 — journal-ready fixes]
+
+Trains Burgers PINN with Adam for 50000 iterations.
+Every 500 iterations, records full gradient vectors for each loss
+component (PDE, IC, BC) separately. Computes pairwise cosine
+similarity between these gradients over time.
+
+Tests the hypothesis: gradient conflict (negative cosine similarity)
+between IC and PDE loss causes failure.
+No JSON results found for exp6
+
+--- exp7_collocation_sensitivity.py ---
+exp7_collocation_sensitivity.py — Collocation Sampling Strategy Experiment
+[v2 — journal-ready fixes]
+
+2D Helmholtz equation with fixed architecture. Trains 20 independent PINNs
+with different random seeds for each of 4 sampling strategies:
+  - Uniform random
+  - Latin Hypercube Sampling (LHS)
+  - Sobol sequences
+  - Halton sequences
+
+No JSON results found for exp7
+
+--- exp8_collocation_starvation.py ---
+exp8_collocation_starvation.py — Collocation Count & Adaptive Refinement
+[v2 — journal-ready fixes]
+
+Helmholtz PINN trained with collocation counts:
+  [50, 100, 200, 500, 1000, 2000, 5000]
+Each count tested with N_SWEEP_SEEDS seeds (mean ± std reported).
+Finds minimum viable count. Then runs adaptive refinement:
+  Start 500 pts (above starvation cliff) → pre-train to convergence
+  → identify top-20% residual regions → add 100 more → repeat × 10.
+
+No JSON results found for exp8
+
+--- exp9_boundary_ratio.py ---
+exp9_boundary_ratio.py — Boundary vs Interior Collocation Ratio
+[v2-fast — journal-ready + speed optimised for RTX 3050]
+
+All scientific content is IDENTICAL to v2-journal-ready:
+  - N_SEEDS=3, multi-seed error bars                        (FIX 2)
+  - Final training loss plot replacing flat convergence     (FIX 1)
+  - Shared colorbar across all error heatmaps               (FIX 3)
+  - Corrected starvation threshold analysis                 (FIX 4)
+  - Non-monotonicity annotation with seed-confirmation      (FIX 5)
+
+No JSON results found for exp9
+
+--- exp10_stiffness_failure.py ---
+exp10_stiffness_failure.py — Stiffness Failure Experiment (Heat Equation)
+
+Train PINNs on the heat equation u_t = α·u_xx with:
+  α ∈ [1.0, 0.1, 0.01, 0.001, 0.0001]
+
+For each α:
+  - Record L2 error, iterations to convergence, loss trajectory
+  - Compute stiffness ratio of the differential operator
+  - Find the stiffness threshold beyond which no PINN converges
+
+No JSON results found for exp10
+
+--- exp11_multiscale_failure.py ---
+exp11_multiscale_failure.py — Multi-Scale Failure (Allen-Cahn)
+
+Studies failure modes for Allen-Cahn equation at different interface
+widths ε ∈ [0.1, 0.01, 0.001, 0.0001].
+
+For each ε:
+  - Classify failure mode: missed interface / wrong steady state / divergence
+  - Plot predicted vs exact solution
+  - Compute interface position error separately from bulk error
+
+No JSON results found for exp11
+
+--- exp12_temporal_stiffness.py ---
+exp12_temporal_stiffness.py — Temporal Stiffness / Long-Time Integration
+
+Heat equation with α=0.01:
+  1. Single-domain PINN over [0, 10]
+  2. Sequential time-windowed training: [0,1], [1,2], ..., [9,10]
+     with transfer learning between windows.
+
+Compares error accumulation. Finds:
+  - Whether single-domain / windowed PINN ever catastrophically fails
+  - If it does, at what time
+No JSON results found for exp12
+
+--- exp13_initialization_failure.py ---
+exp13_initialization_failure.py — Initialization Failure Study
+
+Systematic study of how weight initialization affects PINN training for
+the Burgers equation. Trains 50 independent runs for each strategy:
+  - Xavier (normal)
+  - He (Kaiming normal)
+  - Random normal with std ∈ [0.001, 0.01, 0.1, 1.0, 10.0]
+  - Orthogonal
+
+For each run, records:
+No JSON results found for exp13
+
+--- exp14_optimizer_failure.py ---
+exp14_optimizer_failure.py — Optimizer-Induced Failure Study
+[v2 — journal-ready fixes]
+
+Trains the same Burgers PINN architecture with different optimizers:
+  - Adam (lr=1e-3, 1e-4, 1e-2)
+  - L-BFGS
+  - RMSprop
+  - SGD with momentum
+  - Adam→L-BFGS hybrid at switch points 10000, 20000, 30000
+
+No JSON results found for exp14
+
+--- exp15_lr_phase_diagram.py ---
+exp15_lr_phase_diagram.py — Learning Rate Failure Phase Diagram
+[v2 — journal-ready fixes]
+
+Sweeps learning rate and training duration for the Burgers PINN with Adam:
+  - Learning rates: [1e-5, 5e-5, 1e-4, 5e-4, 1e-3, 5e-3, 1e-2, 5e-2, 0.1]
+  - Iterations:     [10000, 30000, 50000, 100000]
+
+Trains all combinations (36 total), recording final L2 error.
+Generates a 2D heatmap phase diagram identifying three regimes:
+  1. Underfitting zone  (not enough iterations or LR too low)
+No JSON results found for exp15
+
+--- exp16_causality_failure.py ---
+exp16_causality_failure.py — Causality Violation in Standard PINNs
+[v2 — journal-ready fixes]
+
+Reproduces and extends the causality failure experiment from Wang et al. 2022.
+Trains a PINN on the 1D advection equation at β=10 (marginal failure case)
+using:
+  (A) Standard uniform collocation in time
+  (B) Causal training with a time-band causal weighting scheme
+
+Protocol:
+--- JSON Data for exp16 ---
+Key: final_mean_error
+  standard: 0.829841645835423
+  causal: 1.439285009924346
+  improvement_pct: -73.44092299376543
+
+--- exp17_temporal_extrapolation.py ---
+exp17_temporal_extrapolation.py — Experiment 17: Temporal Extrapolation Failure
+
+Designs a temporal extrapolation failure study for PINNs on the 1D advection
+equation (β=10).
+
+Protocol:
+  1. For each T_train in [0.5, 1.0, 2.0, 5.0]:
+     a. Train a PINN on [0, T_train]
+     b. Evaluate on [0, 10.0]
+     c. Record relative error as a function of t
+--- JSON Data for exp17 ---
+
+--- exp18_compound_failure.py ---
+exp18_compound_failure.py — Experiment 18: Compound Failure Interaction Map
+
+Novel two-failure interaction study combining spectral bias + gradient pathology
+simultaneously on the 1D advection equation at β=30 (spectral failure zone).
+
+Protocol:
+  1. Train a PINN for 50,000 iterations, recording at checkpoints
+     [0, 1k, 5k, 10k, 20k, 30k, 50k].
+  2. At every training step track:
+       (a) Fourier spectrum error per frequency band (k=1..16)
+--- JSON Data for exp18 ---
+
+--- exp19_burgers_failure_map.py ---
+exp19_burgers_failure_map.py — Experiment 19: Failure Mode Phase Diagram for Burgers PINNs
+
+Systematically sweeps viscosity ν from 0.1 to 0.0001 (20 log-spaced steps) on the
+viscous Burgers equation and classifies the failure mode at each ν.
+
+Failure mode taxonomy:
+  (A) successful_convergence    — L2 < 0.05, loss stable
+  (B) spectral_bias             — high-frequency Fourier error dominant
+  (C) gradient_pathology        — |∇L_pde| / |∇L_bc| > 100 (gradient imbalance)
+  (D) collocation_starvation    — residual concentrates near shock; sparse collocate
+No JSON results found for exp19
+
+--- exp20_failure_fingerprinting.py ---
+exp20_failure_fingerprinting.py — Experiment 20: Failure Fingerprinting & Clustering
+
+Novel failure fingerprinting experiment across 4 PDEs.
+For each PDE, 10 PINNs are intentionally driven to failure via parameter tuning.
+Each failed run is characterised by 8 diagnostic signals then clustered (k-means, k=4).
+
+PDEs tested:
+  1. Advection     — β ∈ {30,50,80}            (high β → spectral failure)
+  2. Burgers       — ν ∈ {0.001, 0.005, 0.0001} (low ν → shock / gradient failure)
+  3. Allen–Cahn    — ε ∈ {0.01, 0.005}          (small ε → sharp interface failure)
+No JSON results found for exp20
+
+exp21: NOT FOUND
+exp22: NOT FOUND

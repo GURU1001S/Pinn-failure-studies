@@ -1,0 +1,303 @@
+{
+  "experiment": "Activation Function Mitigation",
+  "version": "v2-journal-ready",
+  "config": {
+    "n_hidden": 4,
+    "n_neurons": 64,
+    "n_epochs": 15000,
+    "lr": 0.001,
+    "l2_failure_threshold": 0.1,
+    "trivial_collapse_threshold": 0.995,
+    "spectral_ratio_threshold": 0.1,
+    "spectral_noise_floor": 1e-08,
+    "stability_window_epochs": 1000
+  },
+  "failure_betas": [
+    30,
+    50,
+    100
+  ],
+  "activation_names": [
+    "tanh",
+    "sin",
+    "swish",
+    "gelu",
+    "fourier_1",
+    "fourier_10",
+    "fourier_100"
+  ],
+  "l2_matrix": [
+    [
+      0.9143658931361501,
+      0.9800632066548554,
+      0.9917565264839676
+    ],
+    [
+      0.8875456306118827,
+      0.9446183014776288,
+      0.9843088726998771
+    ],
+    [
+      0.8984572175600685,
+      0.9635592141404226,
+      0.9890537511231351
+    ],
+    [
+      0.8974620635764514,
+      0.9626395495413365,
+      0.9907154539909803
+    ],
+    [
+      0.9646598071278459,
+      1.0108175357203513,
+      1.5465339155885407
+    ],
+    [
+      0.9928714803937755,
+      0.999323263221821,
+      0.9999619859703893
+    ],
+    [
+      1.0000008528342919,
+      1.000001416227578,
+      0.9999988124639854
+    ]
+  ],
+  "l2_matrix_labels": {
+    "rows": [
+      "tanh",
+      "sin",
+      "swish",
+      "gelu",
+      "fourier_1",
+      "fourier_10",
+      "fourier_100"
+    ],
+    "cols": [
+      "beta=30",
+      "beta=50",
+      "beta=100"
+    ]
+  },
+  "any_activation_succeeded": false,
+  "best_activation": "sin",
+  "best_activation_label": "sin (SIREN)",
+  "best_max_passing_beta": 0,
+  "best_mean_l2": 0.9388242682631295,
+  "best_activation_note": "No activation function achieved L2 < 0.1 at any tested beta value. 'sin' is reported as 'best' solely because it has the lowest mean L2 (0.9388) among universally failing configurations. best_max_passing_beta = 0 confirms total failure.",
+  "trivial_collapse_per_config": {
+    "tanh__beta30": false,
+    "tanh__beta50": false,
+    "tanh__beta100": false,
+    "sin__beta30": false,
+    "sin__beta50": false,
+    "sin__beta100": false,
+    "swish__beta30": false,
+    "swish__beta50": false,
+    "swish__beta100": false,
+    "gelu__beta30": false,
+    "gelu__beta50": false,
+    "gelu__beta100": false,
+    "fourier_1__beta30": false,
+    "fourier_1__beta50": true,
+    "fourier_1__beta100": true,
+    "fourier_10__beta30": false,
+    "fourier_10__beta50": true,
+    "fourier_10__beta100": true,
+    "fourier_100__beta30": true,
+    "fourier_100__beta50": true,
+    "fourier_100__beta100": true
+  },
+  "trivially_collapsed_configs": [
+    "fourier_1@\u03b2=50",
+    "fourier_1@\u03b2=100",
+    "fourier_10@\u03b2=50",
+    "fourier_10@\u03b2=100",
+    "fourier_100@\u03b2=30",
+    "fourier_100@\u03b2=50",
+    "fourier_100@\u03b2=100"
+  ],
+  "trivial_collapse_note": "A config is flagged as trivial collapse when L2 >= 0.995. This indicates the network converged to u\u22610 (zero-function attractor). For a zero-prediction: ||u_pred - u_exact|| / ||u_exact|| = ||u_exact|| / ||u_exact|| = 1. FF(sigma=100) shows this pattern at all betas. Mechanism: sigma=100 random Fourier projections create near-orthogonal features that make the PDE gradient landscape flat near zero, trapping the optimizer at the trivial solution.",
+  "spike_patterns_per_config": {
+    "tanh__beta30": "stable",
+    "tanh__beta50": "stable",
+    "tanh__beta100": "stable",
+    "sin__beta30": "stable",
+    "sin__beta50": "stable",
+    "sin__beta100": "stable",
+    "swish__beta30": "stable",
+    "swish__beta50": "stable",
+    "swish__beta100": "A_resampling",
+    "gelu__beta30": "stable",
+    "gelu__beta50": "stable",
+    "gelu__beta100": "stable",
+    "fourier_1__beta30": "stable",
+    "fourier_1__beta50": "A_resampling",
+    "fourier_1__beta100": "A_resampling",
+    "fourier_10__beta30": "B_ff_instability",
+    "fourier_10__beta50": "B_ff_instability",
+    "fourier_10__beta100": "B_ff_instability",
+    "fourier_100__beta30": "B_ff_instability",
+    "fourier_100__beta50": "B_ff_instability",
+    "fourier_100__beta100": "B_ff_instability"
+  },
+  "pattern_b_configs": [
+    "fourier_10__beta30",
+    "fourier_10__beta50",
+    "fourier_10__beta100",
+    "fourier_100__beta30",
+    "fourier_100__beta50",
+    "fourier_100__beta100"
+  ],
+  "spike_pattern_definitions": {
+    "A_resampling": "Dense regular spikes every ~100 epochs. Caused by collocation point resampling drawing high-residual points transiently. Loss recovers within 1-2 epochs. NOT a failure signal. Tail variance < 1e-6.",
+    "B_ff_instability": "Large isolated spikes with slow recovery (hundreds of epochs). Caused by Fourier feature random projections creating near-resonant interactions with PDE gradient. Gradient direction flips catastrophically. Tail variance > 1e-4. Distinct from Pattern A.",
+    "stable": "No significant spikes. Tail variance < 1e-8."
+  },
+  "cutoff_results": {
+    "tanh__beta30": {
+      "spectral_failure_detected": true,
+      "cutoff_frequency": 1.0,
+      "cutoff_index": 1
+    },
+    "tanh__beta50": {
+      "spectral_failure_detected": true,
+      "cutoff_frequency": 1.0,
+      "cutoff_index": 1
+    },
+    "tanh__beta100": {
+      "spectral_failure_detected": true,
+      "cutoff_frequency": 1.0,
+      "cutoff_index": 1
+    },
+    "sin__beta30": {
+      "spectral_failure_detected": true,
+      "cutoff_frequency": 1.0,
+      "cutoff_index": 1
+    },
+    "sin__beta50": {
+      "spectral_failure_detected": true,
+      "cutoff_frequency": 1.0,
+      "cutoff_index": 1
+    },
+    "sin__beta100": {
+      "spectral_failure_detected": true,
+      "cutoff_frequency": 1.0,
+      "cutoff_index": 1
+    },
+    "swish__beta30": {
+      "spectral_failure_detected": true,
+      "cutoff_frequency": 1.0,
+      "cutoff_index": 1
+    },
+    "swish__beta50": {
+      "spectral_failure_detected": true,
+      "cutoff_frequency": 1.0,
+      "cutoff_index": 1
+    },
+    "swish__beta100": {
+      "spectral_failure_detected": true,
+      "cutoff_frequency": 1.0,
+      "cutoff_index": 1
+    },
+    "gelu__beta30": {
+      "spectral_failure_detected": true,
+      "cutoff_frequency": 1.0,
+      "cutoff_index": 1
+    },
+    "gelu__beta50": {
+      "spectral_failure_detected": true,
+      "cutoff_frequency": 1.0,
+      "cutoff_index": 1
+    },
+    "gelu__beta100": {
+      "spectral_failure_detected": true,
+      "cutoff_frequency": 1.0,
+      "cutoff_index": 1
+    },
+    "fourier_1__beta30": {
+      "spectral_failure_detected": true,
+      "cutoff_frequency": 1.0,
+      "cutoff_index": 1
+    },
+    "fourier_1__beta50": {
+      "spectral_failure_detected": true,
+      "cutoff_frequency": 1.0,
+      "cutoff_index": 1
+    },
+    "fourier_1__beta100": {
+      "spectral_failure_detected": true,
+      "cutoff_frequency": 1.0,
+      "cutoff_index": 1
+    },
+    "fourier_10__beta30": {
+      "spectral_failure_detected": true,
+      "cutoff_frequency": 1.0,
+      "cutoff_index": 1
+    },
+    "fourier_10__beta50": {
+      "spectral_failure_detected": true,
+      "cutoff_frequency": 1.0,
+      "cutoff_index": 1
+    },
+    "fourier_10__beta100": {
+      "spectral_failure_detected": true,
+      "cutoff_frequency": 0.0,
+      "cutoff_index": 0
+    },
+    "fourier_100__beta30": {
+      "spectral_failure_detected": true,
+      "cutoff_frequency": 0.0,
+      "cutoff_index": 0
+    },
+    "fourier_100__beta50": {
+      "spectral_failure_detected": true,
+      "cutoff_frequency": 0.0,
+      "cutoff_index": 0
+    },
+    "fourier_100__beta100": {
+      "spectral_failure_detected": true,
+      "cutoff_frequency": 0.0,
+      "cutoff_index": 0
+    }
+  },
+  "cutoff_fix_note": "v1 find_cutoff_frequency() returned 1.0 for every config due to a threshold logic error. v2 uses the noise-floor-gated ratio test from exp1 v2: cutoff = first frequency where P_pred < 0.1 \u00d7 P_exact, only where P_exact > 1e-08. spectral_failure_detected=false means PINN tracked exact spectrum everywhere meaningful \u2014 not a data artifact.",
+  "average_loss_variance": {
+    "tanh": 2.1252338629384503e-09,
+    "sin": 3.4968346117404458e-09,
+    "swish": 6.990453584884456e-09,
+    "gelu": 1.6928471944793932e-09,
+    "fourier_1": 3.220830241417239e-05,
+    "fourier_10": 0.25496742064312766,
+    "fourier_100": 0.03375501742428879
+  },
+  "training_times": {
+    "tanh__beta30": 131.3905987739563,
+    "tanh__beta50": 132.09913849830627,
+    "tanh__beta100": 131.76732754707336,
+    "sin__beta30": 131.59288573265076,
+    "sin__beta50": 139.64611530303955,
+    "sin__beta100": 145.68347334861755,
+    "swish__beta30": 182.58801746368408,
+    "swish__beta50": 181.82132697105408,
+    "swish__beta100": 177.68636012077332,
+    "gelu__beta30": 163.88691592216492,
+    "gelu__beta50": 155.99671578407288,
+    "gelu__beta100": 166.76690983772278,
+    "fourier_1__beta30": 193.17703580856323,
+    "fourier_1__beta50": 189.89415383338928,
+    "fourier_1__beta100": 186.34752535820007,
+    "fourier_10__beta30": 181.20962119102478,
+    "fourier_10__beta50": 181.76312398910522,
+    "fourier_10__beta100": 190.0453712940216,
+    "fourier_100__beta30": 184.69993424415588,
+    "fourier_100__beta50": 186.4761414527893,
+    "fourier_100__beta100": 184.17052912712097
+  },
+  "total_training_time_seconds": 3518.709221601486,
+  "figure_notes": {
+    "l2_heatmap": "Colormap anchored to the failure zone (all values exceed L2 > 0.1). Orange borders mark trivial collapse (L2 >= 0.995). v1 heatmap used RdYlGn_r which rendered sin/tanh cells green, falsely implying partial success.",
+    "spectral_residuals": "y-axis shows |FFT(u_pred - u_exact)|^2, the pointwise error spectrum. This is distinct from the solution spectrum in exp1/spectral_comparison.png which shows |FFT(u)|^2 for PINN vs exact solutions separately.",
+    "training_curves": "Two spike patterns are present. Pattern A (dense regular spikes, tanh/sin/swish/gelu): collocation resampling artifact, not a failure signal. Pattern B (large isolated spikes, FF(sigma=10/100)): Fourier feature gradient instability \u2014 a genuine failure mode."
+  }
+}

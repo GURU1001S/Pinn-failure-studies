@@ -1,0 +1,354 @@
+{
+  "experiment": "Learning Rate Failure Phase Diagram",
+  "version": "v2-journal-ready",
+  "config": {
+    "n_hidden": 4,
+    "n_neurons": 64,
+    "learning_rates": [
+      1e-05,
+      5e-05,
+      0.0001,
+      0.0005,
+      0.001,
+      0.005,
+      0.01,
+      0.05,
+      0.1
+    ],
+    "iteration_counts": [
+      10000,
+      30000,
+      50000,
+      100000
+    ],
+    "n_seeds": 2,
+    "eta_min": 1e-06,
+    "convergence_threshold": 0.1,
+    "divergence_threshold": 5.0,
+    "fast_mode": false
+  },
+  "fix_notes": {
+    "fix1_eta_min": "v1 used eta_min = lr \u00d7 0.01, making the final LR fraction different across configs (LR=0.1 \u2192 eta=0.001, LR=1e-5 \u2192 eta=1e-7). v2 uses fixed eta_min=1e-06 for all configs so the scheduler decay curve is equivalent.",
+    "fix2_divergence": "v1 detected divergence only by loss > 1e10, which gradient clipping (norm=5.0) prevented. Many diverged configs were silently misclassified as underfitting. v2 uses three criteria: loss > 100000000.0 (post-clip), pre-clip grad norm > 10000.0, parameter norm > 1000000.0.",
+    "fix3_heatmap": "v1 set inf\u219210.0 for diverged cells, making them indistinguishable from L2=10.0 runs in the colormap. v2 uses nan\u2192black (set_bad='black') for confirmed diverged cells and annotates them 'DIV', entirely separate from the L2 colormap range.",
+    "fix4_runtime": "v1 silently ran 100k-epoch configs (up to ~12hr each on RTX 3050). v2 prints estimated runtime warning before starting and offers FAST_MODE=True to skip 100k column.",
+    "fix5_seeds": "v1 used single seed per config. v2 uses 2 seeds. Configs where seeds disagree on regime (convergence vs underfitting vs divergence) are flagged 'uncertain=True' in the results."
+  },
+  "l2_matrix": [
+    [
+      0.41477456149612946,
+      0.22056182318495987,
+      0.10159211280892147,
+      0.09054049059905062
+    ],
+    [
+      0.2625786225218665,
+      0.0922748011574778,
+      0.09072631908814549,
+      0.09047802898268531
+    ],
+    [
+      0.11187035134272202,
+      0.09054014961382077,
+      0.0905246376529859,
+      0.09049402081982988
+    ],
+    [
+      0.1015143588958769,
+      0.09034761173638317,
+      0.0904894864732452,
+      0.09043208345079003
+    ],
+    [
+      0.09001884500626761,
+      0.09051678746588873,
+      0.09046807240730984,
+      0.09051325596270599
+    ],
+    [
+      0.09046977742969864,
+      0.09045608109586666,
+      0.090456450685791,
+      0.09049362250719187
+    ],
+    [
+      0.09043531768223323,
+      0.09046015604217536,
+      0.09052477522628877,
+      0.09269842891384142
+    ],
+    [
+      0.5321517994007977,
+      0.10699910088827626,
+      1.0075813501749777,
+      Infinity
+    ],
+    [
+      1.0075813598612984,
+      1.0075814623993855,
+      1.0075813701600862,
+      1.0075813517122931
+    ]
+  ],
+  "std_matrix": [
+    [
+      0.0018608482936250947,
+      0.0013576514893053615,
+      0.0013189648572482157,
+      2.4729200097474424e-05
+    ],
+    [
+      0.0004382862459377801,
+      0.0003817579370624935,
+      0.0003996389304616321,
+      2.89711493075967e-05
+    ],
+    [
+      0.000812941618029632,
+      0.0002750800758988259,
+      0.00023822034243656254,
+      8.473366812376121e-05
+    ],
+    [
+      0.008208292732643264,
+      0.0003898137121658013,
+      0.00014586283040008557,
+      3.3538213884173884e-05
+    ],
+    [
+      0.0002676080730738342,
+      6.0816392890919446e-05,
+      2.3793326196945574e-05,
+      1.0083479004448226e-05
+    ],
+    [
+      7.2746791664399235e-06,
+      2.252722910017768e-06,
+      1.3561421319328859e-05,
+      2.2981924963479117e-05
+    ],
+    [
+      8.9361335591856e-06,
+      3.21875663175028e-05,
+      6.218162846704373e-05,
+      0.0020187547214763277
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ]
+  ],
+  "regime_matrix": [
+    [
+      "underfitting",
+      "underfitting",
+      "underfitting",
+      "convergence"
+    ],
+    [
+      "underfitting",
+      "convergence",
+      "convergence",
+      "convergence"
+    ],
+    [
+      "underfitting",
+      "convergence",
+      "convergence",
+      "convergence"
+    ],
+    [
+      "underfitting",
+      "convergence",
+      "convergence",
+      "convergence"
+    ],
+    [
+      "convergence",
+      "convergence",
+      "convergence",
+      "convergence"
+    ],
+    [
+      "convergence",
+      "convergence",
+      "convergence",
+      "convergence"
+    ],
+    [
+      "convergence",
+      "convergence",
+      "convergence",
+      "convergence"
+    ],
+    [
+      "underfitting",
+      "underfitting",
+      "underfitting",
+      "divergence"
+    ],
+    [
+      "underfitting",
+      "underfitting",
+      "underfitting",
+      "underfitting"
+    ]
+  ],
+  "uncertain_matrix": [
+    [
+      false,
+      false,
+      false,
+      false
+    ],
+    [
+      false,
+      false,
+      false,
+      false
+    ],
+    [
+      false,
+      false,
+      false,
+      false
+    ],
+    [
+      true,
+      false,
+      false,
+      false
+    ],
+    [
+      false,
+      false,
+      false,
+      false
+    ],
+    [
+      false,
+      false,
+      false,
+      false
+    ],
+    [
+      false,
+      false,
+      false,
+      false
+    ],
+    [
+      true,
+      true,
+      true,
+      false
+    ],
+    [
+      true,
+      true,
+      true,
+      true
+    ]
+  ],
+  "div_matrix": [
+    [
+      false,
+      false,
+      false,
+      false
+    ],
+    [
+      false,
+      false,
+      false,
+      false
+    ],
+    [
+      false,
+      false,
+      false,
+      false
+    ],
+    [
+      false,
+      false,
+      false,
+      false
+    ],
+    [
+      false,
+      false,
+      false,
+      false
+    ],
+    [
+      false,
+      false,
+      false,
+      false
+    ],
+    [
+      false,
+      false,
+      false,
+      false
+    ],
+    [
+      true,
+      true,
+      true,
+      true
+    ],
+    [
+      true,
+      true,
+      true,
+      true
+    ]
+  ],
+  "best_config": {
+    "learning_rate": 0.001,
+    "iterations": 10000,
+    "l2_error": 0.09001884500626761
+  },
+  "optimal_corridor": {
+    "10000": {
+      "min_lr": 0.001,
+      "max_lr": 0.01,
+      "best_lr": 0.001,
+      "best_l2": 0.09001884500626761
+    },
+    "30000": {
+      "min_lr": 5e-05,
+      "max_lr": 0.01,
+      "best_lr": 0.0005,
+      "best_l2": 0.09034761173638317
+    },
+    "50000": {
+      "min_lr": 5e-05,
+      "max_lr": 0.01,
+      "best_lr": 0.005,
+      "best_l2": 0.090456450685791
+    },
+    "100000": {
+      "min_lr": 1e-05,
+      "max_lr": 0.01,
+      "best_lr": 0.0005,
+      "best_l2": 0.09043208345079003
+    }
+  },
+  "divergence_boundary": {
+    "10000": null,
+    "30000": null,
+    "50000": null,
+    "100000": 0.05
+  }
+}
