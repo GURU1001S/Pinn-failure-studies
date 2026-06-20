@@ -55,7 +55,7 @@ print(f"[exp26] Device: {DEVICE}")
 torch.backends.cudnn.benchmark = True
 torch.set_float32_matmul_precision("medium")
 
-OUTPUT_DIR = Path(__file__).resolve().parent / "results" / "exp26"
+OUTPUT_DIR = Path(__file__).resolve().parent.parent / "results" / "exp26"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 def load_checkpoint(cfg_id):
@@ -97,12 +97,12 @@ FAILURE_MODES = [
     {"id": "FM3", "label": "Gradient Pathology\n(β=20)",
      "pde": "advection", "beta": 20, "n_col": 3000,
      "n_hidden": 4, "n_neurons": 64, "seed": SEED},
-    {"id": "FM4", "label": "Viscous Shock\n(ν=0.1)",
-     "pde": "burgers",   "nu": 0.1,  "n_col": 3000,
+    {"id": "FM4", "label": "Initialization Outlier\n(ν=0.1, Burgers)",
+     "pde": "burgers",  "nu": 0.1,  "n_col": 3000,
      "n_hidden": 4, "n_neurons": 64, "seed": SEED},
     {"id": "FM5", "label": "Collocation\nStarvation (β=10)",
      "pde": "advection", "beta": 10, "n_col": 200,
-     "n_hidden": 4, "n_neurons": 64, "seed": SEED},
+     "n_hidden": 4, "n_neurons": 64, "seed": SEED + 42},
     {"id": "FM6", "label": "Optim Stagnation\n(shallow)",
      "pde": "advection", "beta": 10, "n_col": 3000,
      "n_hidden": 1, "n_neurons": 16, "seed": SEED},
@@ -430,7 +430,7 @@ def plot_violation_heatmap(all_cons, all_cfgs, filepath):
     Value = final-time violation magnitude.
     """
     cols    = ["|C1| viol", "|C2| viol", "|C3| change", "C4_bc_flux"]
-    ylabels = ["C1: Mass\nViol", "C2: Energy\nViol", "C3: Entropy\nChange", "C4: BC\nFlux"]
+    ylabels = ["C1: Mass\nConservation", "C2: Energy\nConservation", "C3: Entropy\nChange", "C4: BC\nFlux"]
     n_met = len(cols)
     n_fm  = len(all_cfgs)
 
@@ -606,13 +606,13 @@ def run_experiment():
     # Plots
     print("\n── Generating plots ──")
     plot_conservation_profiles(all_cons, FAILURE_MODES,
-        OUTPUT_DIR / "conservation_profiles.pdf")
+        OUTPUT_DIR / "conservation_profiles.png")
     plot_violation_heatmap(all_cons, FAILURE_MODES,
-        OUTPUT_DIR / "violation_heatmap.pdf")
+        OUTPUT_DIR / "violation_heatmap.png")
     plot_l2_vs_conservation(all_cons, all_l2s, FAILURE_MODES,
-        OUTPUT_DIR / "l2_vs_conservation.pdf")
+        OUTPUT_DIR / "l2_vs_conservation.png")
     plot_violation_vs_training(all_tcons, FAILURE_MODES,
-        OUTPUT_DIR / "violation_vs_training.pdf")
+        OUTPUT_DIR / "violation_vs_training.png")
 
     # Grid Convergence Audit
     print("\n── Grid Convergence Audit for C1 Mass (FM2) ──")

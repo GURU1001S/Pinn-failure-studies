@@ -1,63 +1,50 @@
-# PINN Zugzwang: Mapping the Failure Landscape of Physics-Informed Neural Networks
+# An Atlas of PINN Failures: The Zugzwang Thesis - Official Code Repository
 
-This repository contains the complete experimental codebase and reproducibility package for our systematic evaluation of Physics-Informed Neural Network (PINN) failures under stiff partial differential equations (PDEs). 
+This repository contains the official code and reproducibility package for the paper *An Atlas of PINN Failures: The Zugzwang Thesis*. It systematically catalogs, reproduces, and analyzes the fundamental failure modes of Physics-Informed Neural Networks (PINNs) across canonical PDEs. By auditing both scalar errors and global conservation invariants, the codebase demonstrates how disparate network pathologies consistently shatter physical laws in distinct, unpredictable ways despite seemingly successful local convergence.
 
-## Overview
+## Environment Setup
 
-While PINNs demonstrate theoretical promise, they frequently fail to converge on stiff PDEs. This repository provides the tools and scripts used to isolate and quantify these failure mechanisms through spectral profiling, variance decomposition, and optimization diagnostics.
+To reproduce the experiments in the manuscript, clone this repository and set up a Python virtual environment to install the required dependencies.
 
-**Key Empirical Findings (as reported in the manuscript):**
-1. **Loss Landscape Pathologies**: Failed models converge to exceptionally sharp minima ($\lambda_{\max} \approx 9.4 \times 10^7$) compared to successful architectures ($\lambda_{\max} \approx 3.4 \times 10^3$).
-2. **Structural Dominance**: Structural factors (architecture depth/width, activation choices) dominate hyperparameter tuning (learning rate, boundary weighting) in determining outcome variance ($\eta^2 = 0.673$ vs $0.0023$ for Burgers).
-3. **Metric Illusions**: Standard pointwise $L^2$ errors obscure underlying physical violations. Distinct models with near-identical $L^2$ errors exhibit up to a $57\times$ divergence in mass conservation violations.
-4. **The Zugzwang Condition**: PINNs encounter multiple, mathematically independent failure mechanisms simultaneously under stiffness. No single available algorithmic intervention provides a structurally complete remedy.
-
-## Repository Structure
-
-The repository is stripped of temporary outputs and is focused strictly on reproducible scientific artifacts:
-
-```text
-.
-├── environment.yml             # Conda environment specifications
-├── requirements.txt            # Python pip dependencies
-├── experiments/                # Core reproducibility codebase
-│   ├── pinn_core.py            # Neural network architecture definitions
-│   ├── pinn_equations.py       # PDE definitions (Advection, Burgers, etc.)
-│   ├── plot_utils.py           # Evaluation and visualization utilities
-│   ├── exp1_*.py to exp27_*.py # 27 primary experimental sweeps
-│   └── specialexp1_*.py        # Special mitigation and compound failure tests
-└── results/                    # (Generated locally) JSON logs and plots
-```
-
-## Setup and Installation
-
-All experiments were validated using `PyTorch`. We provide exact environment snapshots to guarantee computational reproducibility.
-
-**Using Conda (Recommended):**
 ```bash
-conda env create -f environment.yml
-conda activate pinn_atlas_env
-```
+# Clone the repository
+git clone https://github.com/your-username/pinn-failure-atlas.git
+cd pinn-failure-atlas
 
-**Using Pip:**
-```bash
+# Create and activate a virtual environment
+python -m venv venv
+# On Windows:
+venv\Scripts\activate
+# On Unix/macOS:
+# source venv/bin/activate
+
+# Install the dependencies
 pip install -r requirements.txt
 ```
 
-## Running the Experiments
+## Reproducing the Atlas
 
-Each experiment is standalone and fully reproducible. To run a specific failure analysis sweep (e.g., Experiment 8: Collocation Starvation), simply execute the corresponding Python script:
+All experiments are organized within the `experiments/` directory. To run the core scripts and reproduce the key findings of the manuscript, execute the following commands from the root directory:
 
 ```bash
-python experiments/exp8_collocation_starvation.py
+# Reproduce the global phase space mapping (Experiment 25)
+python experiments/exp25_phase_space.py
+
+# Reproduce the comprehensive conservation law audit (Experiment 26)
+python experiments/exp26_conservation_law_audit.py
 ```
 
-- **Metrics:** Scripts output raw measurements to `results/exp{N}/exp{N}_results.json`.
-- **Figures:** All manuscript plots are generated natively inside the `results/` subdirectories after completion.
-- **Checkpoints:** Large network weights (`.pt` / `checkpoint.json`) are disabled from version control to maintain repository health, but are saved locally during execution.
+## Random Seeds & Initialization
 
-## Hardware Requirements
-While simple advection sweeps can run on a standard CPU, full convergence mapping (e.g., Experiment 27 Variance Decomposition) is highly computationally intensive and requires a CUDA-capable GPU. The framework defaults to `cuda` if available.
+Stochasticity in neural network initialization is a key element evaluated in this manuscript. To ensure strict reproducibility and perfectly align with Section A.6 of the paper, the codebase adheres to the following seeding strategy:
 
-## Citation
-If you utilize this codebase or our failure metrics in your work, please cite our manuscript. *(Citation details will be updated upon publication).*
+*   **Baseline Runs:** All baseline models strictly default to `SEED = 42`.
+*   **Robustness Checks:** For experiments assessing geometric sensitivity and stability (such as Experiment 5 and Experiment 8), we utilize explicit seed loops to aggregate statistical outcomes.
+*   **Collocation Starvation (FM5):** In Experiment 26, the `FM5` configuration utilizes an explicitly configured seed offset (`SEED + 42`) to guarantee the network explores its distinct starvation trajectory without collapsing into identical basins occupied by completely different failure modes.
+
+## Results Structure
+
+The repository is designed to be fully self-contained. When executing any experiment, all artifacts are automatically routed and saved to the corresponding folder inside the `results/` directory (e.g., `results/exp26/`). This includes:
+*   **Raw Logs:** Extracted metrics and analytical logs.
+*   **Checkpoints:** PyTorch network states (`.pt` files) saved at the final evaluation epoch.
+*   **Generated Plots:** All figures, heatmaps, and diagnostic visualizer outputs utilized throughout the manuscript.
