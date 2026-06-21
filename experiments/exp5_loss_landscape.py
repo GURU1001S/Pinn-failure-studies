@@ -476,6 +476,7 @@ def run_experiment():
                               n_neurons=N_NEURONS, activation="tanh")
     apply_normal_init(model_fail, std=1.0, seed=0)
     train_burgers_pinn(model_fail, n_epochs=N_EPOCHS, log_every=5000)
+    torch.save(model_fail.state_dict(), OUTPUT_DIR / "exp5_hessian_fail.pt")
 
     print("\n── Success model (Xavier init, 20000 epochs) ──")
     torch.manual_seed(SUCCESS_SEED)
@@ -483,6 +484,7 @@ def run_experiment():
     model_success = GenericPINN(in_dim=2, out_dim=1, n_hidden=N_HIDDEN,
                                  n_neurons=N_NEURONS, activation="tanh")
     train_burgers_pinn(model_success, n_epochs=N_EPOCHS, log_every=5000)
+    torch.save(model_success.state_dict(), OUTPUT_DIR / "exp5_hessian_success.pt")
 
     # Evaluate
     l2_fail = l2_success = float("nan")
