@@ -34,6 +34,8 @@ python experiments/exp25_phase_space.py
 python experiments/exp26_conservation_law_audit.py
 ```
 
+**Hessian Verification:** Pre-trained checkpoint weights for Experiment 5 (`results/exp5/`) are included in this repository. Reviewers can directly load these weights to instantly verify the extreme $\lambda_{max}$ divergence without retraining the models from scratch.
+
 ## Random Seeds & Initialization
 
 Stochasticity in neural network initialization is a key element evaluated in this manuscript. To ensure strict reproducibility and perfectly align with Section A.6 of the paper, the codebase adheres to the following seeding strategy:
