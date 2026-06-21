@@ -463,9 +463,8 @@ def run_experiment():
 
     # 1. L2 vs ratio  (FIX 2: error bars,  FIX 5: anomaly annotation)
     fig, ax = plt.subplots(figsize=(12, 6))
-    cmap = matplotlib.cm.get_cmap("viridis")
-    bar_colors = [cmap(0.1) if results_data[f]["status"] == "FAIL"
-                  else cmap(0.9) for f in fracs]
+    bar_colors = ["#2CA02C" if results_data[f]["mean_l2"] < FAILURE_THRESHOLD
+                  else "#D62728" for f in fracs]
     ax.bar(pct_labels, mean_l2s, color=bar_colors, alpha=0.82,
            edgecolor="white")
     ax.errorbar(pct_labels, mean_l2s, yerr=std_l2s,
@@ -514,9 +513,8 @@ def run_experiment():
 
     # 2. FIX 1: Final training loss (replaces flat convergence epoch plot)
     fig, ax = plt.subplots(figsize=(12, 6))
-    cmap = matplotlib.cm.get_cmap("viridis")
-    fl_colors = [cmap(0.1) if results_data[f]["status"] == "FAIL"
-                 else "#1565C0" for f in fracs]
+    fl_colors = ["#1565C0" if results_data[f]["mean_l2"] < FAILURE_THRESHOLD
+                 else "#D62728" for f in fracs]
     ax.bar(pct_labels, fl_means, color=fl_colors, alpha=0.82,
            edgecolor="white")
     std_fl_list = [results_data[f]["std_final_loss"] for f in fracs]

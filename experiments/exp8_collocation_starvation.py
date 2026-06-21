@@ -463,8 +463,8 @@ def plot_l2_vs_count_errorbars(count_results, counts,
     ax.set_yscale("log")
     ax.set_title(
         f"L2 Error vs Collocation Count  (mean ± σ, {N_SWEEP_SEEDS} seeds)\n"
-        "Red = FAIL ($L^2 \geq 0.10$), Green = PASS. "
-        "Starvation cliff between N=200 and N=500.",
+        "Red = FAIL (L2 >= 0.10), Green = PASS. "
+        "Starvation cliff between N=200 and N=500; non-monotonic failure at N=1000.",
         fontweight="bold", fontsize=11)
     ax.legend(fontsize=9)
     plt.tight_layout()
@@ -530,7 +530,7 @@ def run_experiment():
 
         mean_l2 = float(np.mean(seed_l2s))
         std_l2  = float(np.std(seed_l2s))
-        status  = "FAIL" if mean_l2 > L2_FAILURE_THRESHOLD else "PASS"
+        status  = "FAIL" if mean_l2 >= L2_FAILURE_THRESHOLD else "PASS"
         print(f"  → N={n_int}: mean={mean_l2:.6f}  "
               f"std={std_l2:.6f}  [{status}]")
 

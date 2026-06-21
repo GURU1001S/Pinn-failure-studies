@@ -85,9 +85,23 @@ def savefig(fig, filepath, **kwargs):
     """Save figure and close."""
     filepath = Path(filepath)
     filepath.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Save original format
     fig.savefig(filepath, bbox_inches="tight", **kwargs)
+    
+    # Save alternate format
+    if filepath.suffix == '.pdf':
+        png_path = filepath.with_suffix('.png')
+        fig.savefig(png_path, bbox_inches="tight", **kwargs)
+        print(f"  Figure saved: {filepath} & {png_path}")
+    elif filepath.suffix == '.png':
+        pdf_path = filepath.with_suffix('.pdf')
+        fig.savefig(pdf_path, bbox_inches="tight", **kwargs)
+        print(f"  Figure saved: {filepath} & {pdf_path}")
+    else:
+        print(f"  Figure saved: {filepath}")
+        
     plt.close(fig)
-    print(f"  Figure saved: {filepath}")
 
 
 # ===================================================================

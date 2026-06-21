@@ -173,7 +173,7 @@ EARLY_STOP_CHECK_EVERY     = 1000
 
 # Classification thresholds
 L2_SUCCESS   = 0.10
-L2_FAILURE   = 0.50
+L2_FAILURE   = 0.10
 GRAD_THRESH  = 20.0     # gradient ratio above this → gradient pathology
 
 # Regime codes
@@ -350,7 +350,7 @@ def classify_regime(l2, grad_r, diverged=False):
     if diverged: return DIVERGED
     if l2 < L2_SUCCESS: return SUCCESS
     if grad_r > GRAD_THRESH: return GRADIENT_PATHOLOGY
-    if l2 > L2_FAILURE: return SPECTRAL_BIAS
+    if l2 >= L2_FAILURE: return SPECTRAL_BIAS
     return UNCLASSIFIED
 
 
@@ -749,9 +749,10 @@ def plot_phase_map(code_mat, l2_mat, x_vals, y_vals,
     ax2.set_title("L2 Error + Success Boundary", fontsize=11)
     ax2.legend(fontsize=8)
 
-    fig.savefig(filepath, dpi=150, bbox_inches="tight")
+    for ext in [".pdf", ".png"]:
+        fig.savefig(filepath.with_suffix(ext), dpi=150, bbox_inches="tight")
     plt.close(fig)
-    print(f"  Saved: {filepath}")
+    print(f"  Saved: {filepath.with_suffix('.pdf')} & .png")
 
 
 def plot_boundary_fits(results, filepath):
@@ -813,9 +814,10 @@ def plot_boundary_fits(results, filepath):
         ax.grid(True, alpha=0.3)
         ax.set_ylim(bottom=0)
 
-    fig.savefig(filepath, dpi=150, bbox_inches="tight")
+    for ext in [".pdf", ".png"]:
+        fig.savefig(filepath.with_suffix(ext), dpi=150, bbox_inches="tight")
     plt.close(fig)
-    print(f"  Saved: {filepath}")
+    print(f"  Saved: {filepath.with_suffix('.pdf')} & .png")
 
 
 def plot_triple_point(code_mat_A, l2_mat_A, filepath):
@@ -877,9 +879,10 @@ def plot_triple_point(code_mat_A, l2_mat_A, filepath):
         Patch(facecolor="#7F7F7F", label="U = Unclassified"),
     ], fontsize=9, loc="upper right")
 
-    fig.savefig(filepath, dpi=150, bbox_inches="tight")
+    for ext in [".pdf", ".png"]:
+        fig.savefig(filepath.with_suffix(ext), dpi=150, bbox_inches="tight")
     plt.close(fig)
-    print(f"  Saved: {filepath}")
+    print(f"  Saved: {filepath.with_suffix('.pdf')} & .png")
 
 
 # ===================================================================
