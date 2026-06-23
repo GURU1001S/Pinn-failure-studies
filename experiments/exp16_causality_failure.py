@@ -1,54 +1,3 @@
-"""
-exp16_causality_failure.py — Causality Violation in Standard PINNs
-[v2 — journal-ready fixes]
-
-Reproduces and extends the causality failure experiment from Wang et al. 2022.
-Trains a PINN on the 1D advection equation at β=10 (marginal failure case)
-using:
-  (A) Standard uniform collocation in time
-  (B) Causal training with a time-band causal weighting scheme
-
-Protocol:
-  1. Train both variants recording snapshots at [1000, 5000, 10000, 30000, 50000]
-  2. At each checkpoint, compute pointwise residual |u - u_exact| on fine grid
-  3. Compare temporal error profiles u(t) := mean_x |u - u_exact|
-  4. Quantify causality-violation lag metric
-
-Outputs (results/exp16/):
-  - residual_maps_standard.png
-  - residual_maps_causal.png
-  - temporal_error_comparison.png
-  - causality_lag_analysis.png
-  - exp16_results.json
-
-FIXES vs v1 (journal-ready):
-  [FIX 1] β changed from 50 to 10. At β=50 both models fail completely
-          (L2 > 0.83) due to spectral bias — the experiment was comparing
-          two zero-function predictors, not measuring causality effects.
-          β=10 is the marginal failure case (L2≈0.035 in Exp 1) where
-          the PINN partially succeeds and causality differences are visible.
-
-  [FIX 2] Causal weight formula fixed. v1 used multiplicative cascade:
-          w[b] = w[b-1] * gate, which with steepness=10 and CAUSAL_EPS=0.01
-          collapses to w[3]≈3×10⁻⁷ by band 3. The network trained almost
-          exclusively on t≈0, making causal training worse than standard
-          (improvement_pct = -73%). v2 uses per-band gate without cascade:
-          w[b] = sigmoid(steepness * (eps - mean_residual_{b-1}))
-          so each band is gated independently on its predecessor.
-
-  [FIX 3] CAUSAL_EPS raised from 0.01 to 0.3. At β=10, training residuals
-          are in the 0.1–1.0 range early in training. eps=0.01 caused
-          gate ≈ sigmoid(10*(0.01-0.5)) ≈ 0 for all bands from the start.
-          eps=0.3 gives a meaningful threshold that gates open as residuals
-          improve during training.
-
-  [FIX 4] Explicit seed for reproducibility. v1 had no seed control.
-
-  [FIX 5] Lag metric fallback documented. If both models fail completely
-          (lag=t_max for all checkpoints), the JSON records
-          lag_metric_informative=False and includes a note.
-"""
-
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -63,9 +12,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-# ===================================================================
-# Speed flags
-# ===================================================================
 torch.backends.cudnn.benchmark = True
 torch.set_float32_matmul_precision("medium")
 
@@ -76,11 +22,9 @@ print(f"[exp16] Device: {DEVICE}")
 OUTPUT_DIR = Path(__file__).resolve().parent / "results" / "exp16"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# ===================================================================
-# Configuration
-# ===================================================================
-BETA    = 10          # FIX 1: was 50 (complete failure), now 10 (marginal)
-SEED    = 42          # FIX 4: explicit seed
+
+BETA    = 10         
+SEED    = 42         
 N_HIDDEN   = 4
 N_NEURONS  = 128
 ACTIVATION = "tanh"
@@ -94,24 +38,22 @@ N_COLLOCATION = 10000
 N_IC          = 400
 N_BC          = 400
 
-# FIX 2+3: causal parameters
+
 N_TIME_BANDS      = 20
-CAUSAL_EPS        = 0.3    # was 0.01 — too tight, collapsed all weights
-CAUSAL_STEEPNESS  = 5.0    # was 10 — reduced to avoid over-hard gating
+CAUSAL_EPS        = 0.3    
+CAUSAL_STEEPNESS  = 5.0    
 WEIGHT_UPDATE_FREQ = 200
 
-# Evaluation grid
+
 NX_EVAL = 200
 NT_EVAL = 200
 T_MAX   = 2.0
 
-# Lag analysis threshold
-LAG_THRESHOLD = 0.10   # 10% — raised from 5% to be reachable at β=10
+
+LAG_THRESHOLD = 0.10  
 
 
-# ===================================================================
-# Model
-# ===================================================================
+
 
 class AdvectionPINN(nn.Module):
     def __init__(self, n_hidden=4, n_neurons=128, activation="tanh"):
@@ -139,9 +81,7 @@ def exact_solution(x_np, t_np, beta):
     return np.sin(x_np - beta * t_np)
 
 
-# ===================================================================
-# Loss components
-# ===================================================================
+
 
 def pde_residual(model, x, t, beta):
     x = x.requires_grad_(True)
@@ -167,10 +107,7 @@ def sample_collocation(n_col, n_ic, n_bc):
 
 def compute_loss(model, beta, n_col, n_ic, n_bc,
                  causal_weights=None):
-    """
-    Unified loss. If causal_weights is None → standard training.
-    If causal_weights is a (n_bands,) tensor → causal training.
-    """
+  
     (x_col, t_col), (x_ic, t_ic), (t_bc, x_bc_l, x_bc_r) = \
         sample_collocation(n_col, n_ic, n_bc)
 
@@ -178,7 +115,7 @@ def compute_loss(model, beta, n_col, n_ic, n_bc,
     res_sq   = res ** 2
 
     if causal_weights is not None:
-        # Assign each collocation point to its time band
+       
         band_edges = torch.linspace(0, T_MAX, N_TIME_BANDS + 1,
                                     device=DEVICE)
         t_flat = t_col.squeeze(1)
@@ -186,7 +123,7 @@ def compute_loss(model, beta, n_col, n_ic, n_bc,
         for b in range(N_TIME_BANDS):
             mask = (t_flat >= band_edges[b]) & (t_flat < band_edges[b + 1])
             w[mask] = causal_weights[b]
-        # Last edge
+       
         mask = t_flat >= band_edges[-1]
         w[mask] = causal_weights[-1]
         loss_pde = (w.unsqueeze(1).detach() * res_sq).mean()
@@ -202,31 +139,16 @@ def compute_loss(model, beta, n_col, n_ic, n_bc,
     return loss_pde + 100 * loss_ic + 10 * loss_bc
 
 
-# ===================================================================
-# FIX 2+3 — Corrected causal weight update
-# ===================================================================
 
 def update_causal_weights(model, beta):
-    """
-    Per-band causal gate (FIX 2: not cumulative product).
-
-    w[0] = 1.0  (anchored at IC, always active)
-    w[b] = sigmoid(steepness * (eps - mean_residual_{b-1}))
-           for b >= 1
-
-    Each band is gated independently on the mean PDE residual in the
-    previous band. As training progresses and residuals decrease,
-    gates open sequentially from early to late time.
-
-    FIX 3: CAUSAL_EPS=0.3 gives a meaningful threshold reachable at β=10.
-    """
+   
     band_edges = np.linspace(0, T_MAX, N_TIME_BANDS + 1)
     n_probe    = 100
     weights    = torch.ones(N_TIME_BANDS, dtype=DTYPE, device=DEVICE)
 
     band_residuals = []
     for b in range(N_TIME_BANDS):
-        # Probe this band's residual
+       
         x_p = torch.rand(n_probe, 1, dtype=DTYPE, device=DEVICE) * 2 * np.pi
         t_p = (torch.rand(n_probe, 1, dtype=DTYPE, device=DEVICE)
                * (band_edges[b + 1] - band_edges[b])
@@ -242,24 +164,21 @@ def update_causal_weights(model, beta):
         res_b = float((u_t_p + beta * u_x_p).abs().mean().item())
         band_residuals.append(res_b)
 
-        # Compute weight for NEXT band based on this band's residual
+       
         if b + 1 < N_TIME_BANDS:
             gate_val = float(torch.sigmoid(
                 torch.tensor(CAUSAL_STEEPNESS * (CAUSAL_EPS - res_b),
                              dtype=DTYPE)).item())
-            weights[b + 1] = gate_val   # FIX 2: independent gate, not cascade
+            weights[b + 1] = gate_val  
 
     return weights.detach(), band_residuals
 
 
-# ===================================================================
-# Evaluation helpers
-# ===================================================================
 
 def build_eval_grid():
     x_vals = np.linspace(0, 2 * np.pi, NX_EVAL)
     t_vals = np.linspace(0, T_MAX,     NT_EVAL)
-    XX, TT = np.meshgrid(x_vals, t_vals)   # shape (NT_EVAL, NX_EVAL)
+    XX, TT = np.meshgrid(x_vals, t_vals)   
     return XX, TT, x_vals, t_vals
 
 
@@ -279,18 +198,13 @@ def compute_error_map(u_pred, XX, TT, beta):
 
 
 def temporal_error_profile(error_map):
-    return error_map.mean(axis=1)   # (NT_EVAL,)
+    return error_map.mean(axis=1)  
 
 
-# ===================================================================
-# Training runners
-# ===================================================================
+
 
 def train_model(mode, beta, seed, ckpt=None, ckpt_path=None, model_path=None):
-    """
-    mode: "standard" or "causal"
-    Returns (model, snapshots_dict, losses_list, x_vals, t_vals)
-    """
+   
     assert mode in ("standard", "causal")
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -306,7 +220,7 @@ def train_model(mode, beta, seed, ckpt=None, ckpt_path=None, model_path=None):
     snapshots = {}
     losses    = []
 
-    # Initial causal weights (all ones)
+    
     causal_weights = torch.ones(N_TIME_BANDS, dtype=DTYPE, device=DEVICE)
 
     start_epoch = 1
@@ -328,7 +242,7 @@ def train_model(mode, beta, seed, ckpt=None, ckpt_path=None, model_path=None):
             return model, snapshots, losses, x_vals, t_vals
 
     for epoch in range(start_epoch, N_EPOCHS + 1):
-        # Update causal weights periodically
+        
         if mode == "causal" and epoch % WEIGHT_UPDATE_FREQ == 1:
             model.eval()
             with torch.enable_grad():
@@ -355,7 +269,7 @@ def train_model(mode, beta, seed, ckpt=None, ckpt_path=None, model_path=None):
             print(f"    Epoch {epoch:>6d}: loss={loss.item():.4e}  "
                   f"mean_err={err_map.mean():.4f}  {w_info}")
 
-        # Periodic checkpoint
+        
         if epoch % 5000 == 0 or epoch == N_EPOCHS:
             if model_path:
                 torch.save(model.state_dict(), model_path)
@@ -370,9 +284,6 @@ def train_model(mode, beta, seed, ckpt=None, ckpt_path=None, model_path=None):
     return model, snapshots, losses, x_vals, t_vals
 
 
-# ===================================================================
-# Plotting
-# ===================================================================
 
 def plot_residual_maps(snapshots, x_vals, t_vals, title, filepath):
     n    = len(CHECKPOINTS)
@@ -380,7 +291,7 @@ def plot_residual_maps(snapshots, x_vals, t_vals, title, filepath):
                               constrained_layout=True)
     fig.suptitle(title, fontsize=13, fontweight="bold")
 
-    # Shared colormap range (capped at 2.0)
+ 
     vmax = min(max(snapshots[ck].max() for ck in CHECKPOINTS), 2.0)
 
     for ax, ck in zip(axes, CHECKPOINTS):
@@ -504,9 +415,6 @@ def plot_causality_lag_analysis(std_snaps, caus_snaps, t_vals, filepath):
     return std_lags, caus_lags, both_maxed
 
 
-# ===================================================================
-# Main experiment
-# ===================================================================
 
 def run_experiment():
     print("=" * 70)
@@ -520,7 +428,6 @@ def run_experiment():
 
     t0 = time.time()
 
-    # Checkpoint setup
     ckpt_path = OUTPUT_DIR / "exp16_checkpoint.json"
     model_std_path = OUTPUT_DIR / "model_std.pt"
     model_caus_path = OUTPUT_DIR / "model_caus.pt"
@@ -533,7 +440,6 @@ def run_experiment():
         except Exception:
             pass
 
-    # Train both variants
     (model_std,  std_snaps,  std_losses,  x_vals, t_vals) = \
         train_model("standard", BETA, SEED, ckpt, ckpt_path, model_std_path)
     (model_caus, caus_snaps, caus_losses, _,      _     ) = \
@@ -542,7 +448,6 @@ def run_experiment():
     elapsed = time.time() - t0
     print(f"\nTotal training time: {elapsed:.1f}s  ({elapsed/60:.1f} min)")
 
-    # ── Plots ────────────────────────────────────────────────────────
     print("\nGenerating plots...")
 
     plot_residual_maps(
@@ -564,7 +469,6 @@ def run_experiment():
         std_snaps, caus_snaps, t_vals,
         filepath=OUTPUT_DIR / "causality_lag_analysis.png")
 
-    # ── Quantitative summary ─────────────────────────────────────────
     final_ck      = CHECKPOINTS[-1]
     std_final_err  = float(std_snaps[final_ck].mean())
     caus_final_err = float(caus_snaps[final_ck].mean())
@@ -587,7 +491,6 @@ def run_experiment():
         print(f"\n  ⚠ Causal is still WORSE — causal gating may be too aggressive.")
         print(f"    Try increasing CAUSAL_EPS further or reducing CAUSAL_STEEPNESS.")
 
-    # ── JSON ─────────────────────────────────────────────────────────
     results = {
         "experiment": "Causality Violation in Standard PINNs",
         "version":    "v2-journal-ready",
