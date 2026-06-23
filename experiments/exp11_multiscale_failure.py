@@ -1,63 +1,3 @@
-"""
-exp11_multiscale_failure.py — Multi-Scale Failure (Allen-Cahn)
-[v2 — journal-ready fixes]
-
-Studies failure modes for Allen-Cahn equation at different interface
-widths ε ∈ [0.1, 0.01, 0.001, 0.0001].
-
-For each ε:
-  - Classify failure mode per seed (N_SEEDS=3)
-  - Plot predicted vs exact solution
-  - Compute interface position error separately from bulk error
-  - Report mean ± std across seeds
-
-Outputs (results/exp11/):
-  - solutions_comparison.png    (median-seed model, non-failure annotation)
-  - interface_vs_bulk_error.png (mean ± std error bars)
-  - failure_mode_summary.png    (replaced right panel with ratio chart)
-  - interface_ratio_trend.png   (interface/bulk ratio vs ε — key finding)
-  - exp11_results.json
-
-FIXES vs v1 (journal-ready):
-  [FIX 1] Honest non-failure documentation — v1 reported all four ε
-          as "success" but still claimed primary_failure_driver =
-          "interface_width" based on a ratio of two noise-level numbers.
-          The synthesis document overstated these results. v2 explicitly
-          documents: (a) no catastrophic failure occurred in the tested
-          ε range, (b) the interface/bulk ratio trend IS a meaningful
-          finding even in the success regime (spectral bias signature
-          at small ε — interface error grows faster than bulk), and (c)
-          to trigger genuine failure, ε < 0.0001 would likely be needed.
-
-  [FIX 2] Multi-seed evaluation — v1 ran each ε once with no seed
-          control. L2 values (0.00179, 0.000676, 0.00204, 0.00109)
-          are all small enough that ordering could flip with different
-          seeds. v2 runs N_SEEDS=3 seeds per ε and reports mean ± std.
-          Interface/bulk ordering claims are qualified by whether they
-          hold across all seeds.
-
-  [FIX 3] Fixed failure_mode_summary.png right panel — v1 showed four
-          identical green bars of height 1.0 (all "success"), conveying
-          zero information. v2 replaces this with the interface/bulk
-          RATIO per ε (interface_err / bulk_err). A ratio > 1 means
-          interface dominates; < 1 means bulk dominates. This is the
-          actual finding: the ratio flips from <1 at ε=0.1 to >1 at
-          smaller ε, showing the spectral bias signature even in the
-          success regime.
-
-  [FIX 4] solutions_comparison.png — added annotation stating that
-          all ε values succeed visually because L2 < 0.002 in all
-          cases. The expected failure (missed interface) would require
-          ε < 0.0001 based on the current trajectory.
-
-  [FIX 5] primary_failure_driver — v1 computed ie_growth / be_growth
-          and declared "interface_width" as the driver when all runs
-          succeed. v2 correctly reports: no failure detected, so there
-          is no "failure driver." The spectral bias trend (interface
-          error growing faster than bulk as ε decreases) is documented
-          as a precursor finding, not a confirmed failure driver.
-"""
-
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -77,28 +17,18 @@ from plot_utils import savefig, setup_style
 
 setup_style()
 
-# ===================================================================
-# Speed flags
-# ===================================================================
 torch.backends.cudnn.benchmark = True
 torch.set_float32_matmul_precision("medium")
 
-# ===================================================================
-# Config
-# ===================================================================
 EPSILON_VALUES  = [0.1, 0.01, 0.001, 0.0001]
 N_HIDDEN        = 4
 N_NEURONS       = 128
 N_EPOCHS        = 30000
-N_SEEDS         = 3          # FIX 2: multi-seed
-L2_FAIL_THRESH  = 0.10       # L2 above this = failure
+N_SEEDS         = 3          
+L2_FAIL_THRESH  = 0.10      
 
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "results" / "exp11"
 
-
-# ===================================================================
-# Failure classification
-# ===================================================================
 
 def classify_failure(u_pred, u_ref, l2_global):
     """Classify failure mode based on prediction shape and L2."""
@@ -109,8 +39,8 @@ def classify_failure(u_pred, u_ref, l2_global):
 
     u_f    = u_pred[:, -1]
     u_r    = u_ref[:, -1]
-    im     = np.abs(u_r) < 0.5    # interface mask
-    bm     = ~im                   # bulk mask
+    im     = np.abs(u_r) < 0.5   
+    bm     = ~im                 
 
     ie = float(np.mean(np.abs(u_f[im] - u_r[im]))) if im.sum() > 0 else 0.0
     be = float(np.mean(np.abs(u_f[bm] - u_r[bm]))) if bm.sum() > 0 else 0.0
@@ -141,10 +71,6 @@ def find_median_seed_idx(seed_l2s):
     return int(np.argmin([abs(l - m) for l in seed_l2s]))
 
 
-# ===================================================================
-# Main experiment
-# ===================================================================
-
 def run_experiment():
     print("=" * 70)
     print("EXP 11: Multi-Scale Failure (Allen-Cahn)  [v2 — journal]")
@@ -161,7 +87,6 @@ def run_experiment():
         print(f"ε = {eps}")
         print(f"{'━' * 60}")
 
-        # Reference solution (computed once per ε)
         print("  Computing reference...")
         try:
             x_ref, t_ref, u_ref = solve_allen_cahn_reference(eps)
@@ -172,7 +97,6 @@ def run_experiment():
             u_ref = np.outer(x_ref ** 2 * np.cos(np.pi * x_ref),
                              np.exp(-t_ref))
 
-        # Multi-seed training
         seed_l2s  = []
         seed_ie   = []
         seed_be   = []
@@ -207,7 +131,7 @@ def run_experiment():
             print(f"    Seed {seed}: L2={l2:.6f}  "
                   f"ie={ie:.4e}  be={be:.4e}  mode={mode}")
 
-        # Aggregate
+
         mean_l2  = float(np.mean(seed_l2s))
         std_l2   = float(np.std(seed_l2s))
         mean_ie  = float(np.mean(seed_ie))
@@ -215,15 +139,15 @@ def run_experiment():
         mean_be  = float(np.mean(seed_be))
         std_be   = float(np.std(seed_be))
 
-        # Consensus failure mode
+ 
         mode_counts = {m: seed_modes.count(m) for m in set(seed_modes)}
         consensus_mode = max(mode_counts, key=mode_counts.get)
         mode_unanimous = len(set(seed_modes)) == 1
 
-        # Interface/bulk ratio (using means)
+
         ie_be_ratio = mean_ie / (mean_be + 1e-30)
         ie_dominates = mean_ie > mean_be
-        # Robust: does ie > be hold across ALL seeds?
+
         ie_dominates_all = all(i > b for i, b in zip(seed_ie, seed_be))
 
         print(f"  → mean L2={mean_l2:.6f} ± {std_l2:.6f}  "
@@ -231,7 +155,7 @@ def run_experiment():
               f"ie/be ratio={ie_be_ratio:.3f}  "
               f"ie>be all seeds={ie_dominates_all}")
 
-        # Median-seed model for plotting
+
         med_idx   = find_median_seed_idx(seed_l2s)
         u_pred_med = seed_preds[med_idx]
 
@@ -252,17 +176,15 @@ def run_experiment():
             "x_ref":    x_ref,
             "t_ref":    t_ref,
             "u_ref":    u_ref,
-            "u_pred":   u_pred_med,   # median-seed prediction
+            "u_pred":   u_pred_med,  
             "mean_training_time": float(np.mean(seed_times)),
         }
 
-    # ── Analysis ────────────────────────────────────────────────────
     all_succeeded    = all(results_data[e]["mean_l2"] < L2_FAIL_THRESH
                            for e in EPSILON_VALUES)
     any_failed       = any(results_data[e]["mean_l2"] >= L2_FAIL_THRESH
                            for e in EPSILON_VALUES)
 
-    # FIX 5: correct primary driver detection
     if any_failed:
         failed_eps    = [e for e in EPSILON_VALUES
                          if results_data[e]["mean_l2"] >= L2_FAIL_THRESH]
@@ -273,7 +195,7 @@ def run_experiment():
         )
     else:
         primary_driver = "none_detected"
-        # Still compute spectral bias signature (ie/be ratio trend)
+
         ratios = [results_data[e]["ie_be_ratio"] for e in EPSILON_VALUES]
         ratio_trend = "increasing" if ratios[-1] > ratios[0] else "decreasing"
         driver_note = (
@@ -287,7 +209,6 @@ def run_experiment():
             "Full failure would likely require ε < 0.0001."
         )
 
-    # ── Plots ────────────────────────────────────────────────────────
     print("\n── Generating plots ──")
 
     mode_colors = {
@@ -297,7 +218,6 @@ def run_experiment():
         "divergence":        "#000000",
     }
 
-    # 1. Solutions comparison (median seed, FIX 4: non-failure annotation)
     n_eps = len(EPSILON_VALUES)
     fig, axes = plt.subplots(n_eps, 3, figsize=(15, 4 * n_eps))
     if n_eps == 1:
@@ -332,7 +252,6 @@ def run_experiment():
                 ax.set_ylabel("|error|")
             ax.set_xlabel(xlabel)
 
-    # FIX 4: annotation about non-failure
     if all_succeeded:
         fig.text(0.5, 0.01,
                  f"NOTE: All ε values succeed (L2 < {L2_FAIL_THRESH}). "
@@ -351,7 +270,6 @@ def run_experiment():
     plt.tight_layout(rect=[0, 0.04, 1, 1])
     savefig(fig, OUTPUT_DIR / "solutions_comparison.png")
 
-    # 2. Interface vs bulk error (FIX 2: error bars)
     fig, ax = plt.subplots(figsize=(10, 6))
     x_pos = np.arange(len(EPSILON_VALUES))
     w     = 0.35
@@ -381,7 +299,6 @@ def run_experiment():
     ax.legend()
     savefig(fig, OUTPUT_DIR / "interface_vs_bulk_error.png")
 
-    # 3. FIX 3: Failure mode summary — right panel replaced with ratio chart
     fig, axes = plt.subplots(1, 2, figsize=(13, 5))
 
     ax = axes[0]
@@ -409,7 +326,6 @@ def run_experiment():
                 bbox=dict(boxstyle="round", facecolor="#E8F5E9",
                           edgecolor="#2E7D32", alpha=0.9))
 
-    # FIX 3: right panel = interface/bulk ratio (replaces useless bar=1.0 chart)
     ax = axes[1]
     ratios = [results_data[e]["ie_be_ratio"] for e in EPSILON_VALUES]
     ratio_colors = ["#D32F2F" if r > 1.0 else "#1565C0" for r in ratios]
@@ -437,7 +353,7 @@ def run_experiment():
         fontweight="bold", fontsize=12)
     savefig(fig, OUTPUT_DIR / "failure_mode_summary.png")
 
-    # 4. Interface/bulk ratio trend (standalone key-finding figure)
+
     fig, ax = plt.subplots(figsize=(8, 5))
     eps_log  = [np.log10(e) for e in EPSILON_VALUES]
     eps_strs = [f"ε={e}" for e in EPSILON_VALUES]
@@ -471,7 +387,7 @@ def run_experiment():
     ax.grid(True, alpha=0.3)
     savefig(fig, OUTPUT_DIR / "interface_ratio_trend.png")
 
-    # ── JSON ─────────────────────────────────────────────────────────
+
     results = {
         "experiment": "Multi-Scale Failure (Allen-Cahn)",
         "version":    "v2-journal-ready",
@@ -503,7 +419,7 @@ def run_experiment():
             for e in EPSILON_VALUES
         },
 
-        # FIX 5: corrected driver reporting
+
         "all_epsilon_converged":  all_succeeded,
         "any_epsilon_failed":     any_failed,
         "primary_failure_driver": primary_driver,
@@ -522,7 +438,7 @@ def run_experiment():
             "at which point the interface becomes sub-pixel on the collocation grid."
         ),
 
-        # FIX 3: ratio trend documentation
+
         "interface_bulk_ratios": {
             str(e): results_data[e]["ie_be_ratio"] for e in EPSILON_VALUES
         },
@@ -537,7 +453,7 @@ def run_experiment():
             "smooth bulk regions more accurately than sharp interfaces."
         ),
 
-        # FIX 1: v1 overstatement note
+
         "v1_overstatement_note": (
             "v1 reported primary_failure_driver='interface_width' based on "
             "ie_growth / be_growth ratio, implying failure was observed. "
@@ -551,7 +467,6 @@ def run_experiment():
 
     save_results(results, OUTPUT_DIR / "exp11_results.json")
 
-    # ── Summary ─────────────────────────────────────────────────────
     print(f"\n{'=' * 70}")
     print("EXP 11 — COMPLETE  [v2]")
     print(f"{'=' * 70}")
