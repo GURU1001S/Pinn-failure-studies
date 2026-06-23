@@ -1,19 +1,3 @@
-"""
-pinn_equations.py — PDE-specific residual functions and utilities for Blocks 2–4.
-
-Supports:
-  - Burgers equation  (1D viscous):     u_t + u·u_x - ν·u_xx = 0
-  - Helmholtz equation (2D steady):     u_xx + u_yy + k²u = q(x,y)
-  - Heat equation      (1D diffusion):  u_t - α·u_xx = 0
-  - Allen-Cahn equation (1D reaction):  u_t - ε²·u_xx - u + u³ = 0
-
-Each PDE module provides:
-  - Residual computation via autograd
-  - Exact / reference solution
-  - Domain-specific sampling utilities
-  - Training loop with per-component gradient tracking
-"""
-
 import torch
 import torch.nn as nn
 import numpy as np
@@ -21,18 +5,7 @@ import time
 from pathlib import Path
 from scipy.io import loadmat
 from pinn_core import DEVICE, DTYPE, get_activation, save_results
-
-
-# ===================================================================
-# Generic configurable PINN (works for any PDE with 2D input)
-# ===================================================================
-
 class GenericPINN(nn.Module):
-    """
-    MLP:  R^in_dim  →  R^out_dim
-
-    Same architecture as AdvectionPINN but with configurable I/O dimensions.
-    """
     def __init__(self, in_dim=2, out_dim=1, n_hidden=4, n_neurons=64,
                  activation="tanh"):
         super().__init__()
@@ -46,36 +19,19 @@ class GenericPINN(nn.Module):
         layers.append(nn.Linear(n_neurons, out_dim))
         self.net = nn.Sequential(*layers)
         self._init_weights()
-
     def _init_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Linear):
                 nn.init.xavier_normal_(m.weight)
                 nn.init.zeros_(m.bias)
-
     def forward(self, *inputs):
-        """Accept (x, t) or (x1, x2) as separate tensors, or a single
-        pre-concatenated tensor."""
         if len(inputs) == 1:
             return self.net(inputs[0])
         return self.net(torch.cat(inputs, dim=1))
-
-
-# ===================================================================
-# BURGERS EQUATION
-# u_t + u·u_x − ν·u_xx = 0,  x ∈ [-1,1], t ∈ [0,1]
-# IC: u(x,0) = −sin(πx)
-# BC: u(−1,t) = u(1,t) = 0
-# ν = 0.01/π
-# ===================================================================
-
 BURGERS_NU = 0.01 / np.pi
 BURGERS_X_RANGE = (-1.0, 1.0)
 BURGERS_T_RANGE = (0.0, 1.0)
-
-
 def burgers_residual(model, x, t, nu=BURGERS_NU):
-    """Compute r = u_t + u·u_x − ν·u_xx."""
     u = model(x, t)
     grads = torch.ones_like(u)
     u_t = torch.autograd.grad(u, t, grads, create_graph=True, retain_graph=True)[0]
@@ -83,36 +39,22 @@ def burgers_residual(model, x, t, nu=BURGERS_NU):
     u_xx = torch.autograd.grad(u_x, x, torch.ones_like(u_x),
                                 create_graph=True, retain_graph=True)[0]
     return u_t + u * u_x - nu * u_xx
-
-
 def burgers_ic(x):
-    """IC target: u(x, 0) = −sin(πx)."""
     return -torch.sin(np.pi * x)
-
-
 def load_burgers_reference(dataset_path="datasets/burgers_shock.mat"):
-    """Load reference Burgers solution from .mat file."""
     data = loadmat(dataset_path)
     x = data["x"].flatten()
     t = data["t"].flatten()
-    u = data["usol"]  # shape (nx, nt)
+    u = data["usol"]
     return x, t, u
-
-
 def sample_burgers_domain(n_int, n_ic, n_bc):
-    """Sample collocation, IC, and BC points for Burgers."""
-    # Interior
     x_int = torch.rand(n_int, 1, device=DEVICE, dtype=DTYPE) * 2 - 1
     t_int = torch.rand(n_int, 1, device=DEVICE, dtype=DTYPE)
     x_int.requires_grad_(True)
     t_int.requires_grad_(True)
-
-    # IC: t = 0
     x_ic = (torch.rand(n_ic, 1, device=DEVICE, dtype=DTYPE) * 2 - 1).requires_grad_(True)
     t_ic = torch.zeros(n_ic, 1, device=DEVICE, dtype=DTYPE).requires_grad_(True)
     u_ic = burgers_ic(x_ic).detach()
-
-    # BC: x = -1 and x = 1
     n_bc_half = n_bc // 2
     t_bc = torch.rand(n_bc_half, 1, device=DEVICE, dtype=DTYPE)
     x_bc_left = torch.full((n_bc_half, 1), -1.0, device=DEVICE, dtype=DTYPE)
@@ -120,68 +62,36 @@ def sample_burgers_domain(n_int, n_ic, n_bc):
     x_bc = torch.cat([x_bc_left, x_bc_right], dim=0).requires_grad_(True)
     t_bc = torch.cat([t_bc, t_bc.clone()], dim=0).requires_grad_(True)
     u_bc = torch.zeros(n_bc_half * 2, 1, device=DEVICE, dtype=DTYPE)
-
     return (x_int, t_int), (x_ic, t_ic, u_ic), (x_bc, t_bc, u_bc)
-
-
 def train_burgers_pinn(model, n_epochs=20000, lr=1e-3, lr_min=1e-5,
                        n_int=10000, n_ic=200, n_bc=200,
                        nu=BURGERS_NU, w_pde=1.0, w_ic=10.0, w_bc=1.0,
                        log_every=1000, verbose=True,
                        gradient_tracking=False, track_every=1000,
                        lambda_bc=1.0):
-    """
-    Train Burgers PINN with optional per-component gradient tracking.
-
-    Parameters
-    ----------
-    gradient_tracking : bool
-        If True, at every `track_every` iterations record the gradient
-        magnitude of each loss component independently.
-    lambda_bc : float
-        Additional weighting on BC loss for lambda-sweep experiments.
-
-    Returns
-    -------
-    dict with loss histories, training time, and optionally gradient records.
-    """
     model.to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, T_max=n_epochs, eta_min=lr_min)
-
     loss_hist = []
     pde_hist = []
     ic_hist = []
     bc_hist = []
     grad_records = [] if gradient_tracking else None
-
-    (x_int, t_int), (x_ic, t_ic, u_ic), (x_bc, t_bc, u_bc) = \
-        sample_burgers_domain(n_int, n_ic, n_bc)
-
+    (x_int, t_int), (x_ic, t_ic, u_ic), (x_bc, t_bc, u_bc) =        sample_burgers_domain(n_int, n_ic, n_bc)
     start = time.time()
     for epoch in range(n_epochs):
         optimizer.zero_grad()
-
-        # PDE residual
         res = burgers_residual(model, x_int, t_int, nu)
         loss_pde = torch.mean(res ** 2)
-
-        # IC
         u_ic_pred = model(x_ic, t_ic)
         loss_ic = torch.mean((u_ic_pred - u_ic) ** 2)
-
-        # BC
         u_bc_pred = model(x_bc, t_bc)
         loss_bc = torch.mean((u_bc_pred - u_bc) ** 2)
-
         loss = w_pde * loss_pde + w_ic * loss_ic + w_bc * lambda_bc * loss_bc
         loss.backward()
-
-        # --- Gradient tracking ---
         if gradient_tracking and epoch % track_every == 0:
             record = {"epoch": epoch}
-            # PDE gradient magnitude
             optimizer.zero_grad()
             res2 = burgers_residual(model, x_int, t_int, nu)
             l_pde = torch.mean(res2 ** 2)
@@ -190,8 +100,6 @@ def train_burgers_pinn(model, n_epochs=20000, lr=1e-3, lr_min=1e-5,
                                   if p.grad is not None])
             record["pde_grad_norm"] = pde_grad.norm().item()
             record["pde_grad_vec"] = pde_grad.detach().cpu().clone()
-
-            # BC gradient magnitude
             optimizer.zero_grad()
             u_bc2 = model(x_bc, t_bc)
             l_bc = torch.mean((u_bc2 - u_bc) ** 2)
@@ -200,8 +108,6 @@ def train_burgers_pinn(model, n_epochs=20000, lr=1e-3, lr_min=1e-5,
                                  if p.grad is not None])
             record["bc_grad_norm"] = bc_grad.norm().item()
             record["bc_grad_vec"] = bc_grad.detach().cpu().clone()
-
-            # IC gradient magnitude
             optimizer.zero_grad()
             u_ic2 = model(x_ic, t_ic)
             l_ic = torch.mean((u_ic2 - u_ic) ** 2)
@@ -210,10 +116,7 @@ def train_burgers_pinn(model, n_epochs=20000, lr=1e-3, lr_min=1e-5,
                                  if p.grad is not None])
             record["ic_grad_norm"] = ic_grad.norm().item()
             record["ic_grad_vec"] = ic_grad.detach().cpu().clone()
-
             grad_records.append(record)
-
-            # Recompute and backward for the actual step
             optimizer.zero_grad()
             res3 = burgers_residual(model, x_int, t_int, nu)
             l_pde3 = torch.mean(res3 ** 2)
@@ -223,20 +126,16 @@ def train_burgers_pinn(model, n_epochs=20000, lr=1e-3, lr_min=1e-5,
             l_bc3 = torch.mean((u_bc3 - u_bc) ** 2)
             loss_total = w_pde * l_pde3 + w_ic * l_ic3 + w_bc * lambda_bc * l_bc3
             loss_total.backward()
-
         optimizer.step()
         scheduler.step()
-
         loss_hist.append(loss.item())
         pde_hist.append(loss_pde.item())
         ic_hist.append(loss_ic.item())
         bc_hist.append(loss_bc.item())
-
         if verbose and (epoch % log_every == 0 or epoch == n_epochs - 1):
             print(f"  [{epoch:6d}/{n_epochs}] Loss={loss.item():.4e} "
                   f"PDE={loss_pde.item():.4e} IC={loss_ic.item():.4e} "
                   f"BC={loss_bc.item():.4e}")
-
     return {
         "model": model,
         "loss_history": loss_hist,
@@ -246,54 +145,26 @@ def train_burgers_pinn(model, n_epochs=20000, lr=1e-3, lr_min=1e-5,
         "training_time": time.time() - start,
         "gradient_records": grad_records,
     }
-
-
 def evaluate_burgers(model, x_ref, t_ref, u_ref):
-    """Evaluate Burgers PINN against reference solution."""
     nx, nt = len(x_ref), len(t_ref)
     X, T = np.meshgrid(x_ref, t_ref, indexing="ij")
     x_flat = torch.tensor(X.flatten(), dtype=DTYPE, device=DEVICE).unsqueeze(1)
     t_flat = torch.tensor(T.flatten(), dtype=DTYPE, device=DEVICE).unsqueeze(1)
-
     model.eval()
     with torch.no_grad():
         u_pred = model(x_flat, t_flat).cpu().numpy().reshape(nx, nt)
-
     l2_err = np.linalg.norm(u_pred - u_ref) / (np.linalg.norm(u_ref) + 1e-30)
     return u_pred, l2_err
-
-
-# ===================================================================
-# HELMHOLTZ EQUATION (2D, STEADY)
-# u_xx + u_yy + k²u = q(x,y)
-# Domain: (x1, x2) ∈ [-1, 1]²
-# Exact: u = sin(a1·π·x1) · sin(a2·π·x2)
-# k² chosen so that q is computable
-# ===================================================================
-
 HELMHOLTZ_A1 = 1
 HELMHOLTZ_A2 = 4
-HELMHOLTZ_K_SQ = 1.0  # wave number squared
-
-
+HELMHOLTZ_K_SQ = 1.0
 def helmholtz_source(x1, x2, a1=HELMHOLTZ_A1, a2=HELMHOLTZ_A2, k_sq=HELMHOLTZ_K_SQ):
-    """Source term q s.t. u_xx + u_yy + k²u = q for exact solution."""
-    # ∇²u = -(a1² + a2²)π² u
-    # So q = (k² - (a1² + a2²)π²) · u
     u = torch.sin(a1 * np.pi * x1) * torch.sin(a2 * np.pi * x2)
     coeff = k_sq - (a1**2 + a2**2) * np.pi**2
     return coeff * u
-
-
 def helmholtz_exact(x1, x2, a1=HELMHOLTZ_A1, a2=HELMHOLTZ_A2):
-    """Exact solution (works with numpy or torch)."""
-    return np.sin(a1 * np.pi * x1) * np.sin(a2 * np.pi * x2) \
-        if isinstance(x1, np.ndarray) \
-        else torch.sin(a1 * np.pi * x1) * torch.sin(a2 * np.pi * x2)
-
-
+    return np.sin(a1 * np.pi * x1) * np.sin(a2 * np.pi * x2)        if isinstance(x1, np.ndarray)        else torch.sin(a1 * np.pi * x1) * torch.sin(a2 * np.pi * x2)
 def helmholtz_residual(model, x1, x2, k_sq=HELMHOLTZ_K_SQ):
-    """r = u_xx + u_yy + k²u − q."""
     u = model(x1, x2)
     ones = torch.ones_like(u)
     u_x1 = torch.autograd.grad(u, x1, ones, create_graph=True, retain_graph=True)[0]
@@ -304,15 +175,7 @@ def helmholtz_residual(model, x1, x2, k_sq=HELMHOLTZ_K_SQ):
                                    create_graph=True, retain_graph=True)[0]
     q = helmholtz_source(x1, x2, k_sq=k_sq)
     return u_x1x1 + u_x2x2 + k_sq * u - q
-
-
 def sample_helmholtz_domain(n_int, n_bc, method="random"):
-    """
-    Sample interior and boundary points for the Helmholtz equation.
-
-    method: 'random', 'lhs', 'sobol', 'halton'
-    """
-    # Interior points
     if method == "random":
         pts = np.random.rand(n_int, 2) * 2 - 1
     elif method == "lhs":
@@ -329,72 +192,50 @@ def sample_helmholtz_domain(n_int, n_bc, method="random"):
         pts = sampler.random(n=n_int) * 2 - 1
     else:
         raise ValueError(f"Unknown sampling method: {method}")
-
     x1_int = torch.tensor(pts[:, 0:1], dtype=DTYPE, device=DEVICE).requires_grad_(True)
     x2_int = torch.tensor(pts[:, 1:2], dtype=DTYPE, device=DEVICE).requires_grad_(True)
-
-    # Boundary points (4 edges)
     n_per_edge = n_bc // 4
     edges = []
-    # Bottom: x2 = -1
     e = np.column_stack([np.linspace(-1, 1, n_per_edge), -np.ones(n_per_edge)])
     edges.append(e)
-    # Top: x2 = 1
     e = np.column_stack([np.linspace(-1, 1, n_per_edge), np.ones(n_per_edge)])
     edges.append(e)
-    # Left: x1 = -1
     e = np.column_stack([-np.ones(n_per_edge), np.linspace(-1, 1, n_per_edge)])
     edges.append(e)
-    # Right: x1 = 1
     e = np.column_stack([np.ones(n_per_edge), np.linspace(-1, 1, n_per_edge)])
     edges.append(e)
     bc_pts = np.vstack(edges)
-
     x1_bc = torch.tensor(bc_pts[:, 0:1], dtype=DTYPE, device=DEVICE).requires_grad_(True)
     x2_bc = torch.tensor(bc_pts[:, 1:2], dtype=DTYPE, device=DEVICE).requires_grad_(True)
-    # BC: u = 0 on boundary (sin(a·π·(±1)) = 0)
     u_bc = torch.zeros(len(bc_pts), 1, dtype=DTYPE, device=DEVICE)
-
     return (x1_int, x2_int), (x1_bc, x2_bc, u_bc)
-
-
 def train_helmholtz_pinn(model, n_epochs=15000, lr=1e-3, lr_min=1e-5,
                          n_int=2000, n_bc=400, k_sq=HELMHOLTZ_K_SQ,
                          w_pde=1.0, w_bc=10.0, sampling_method="random",
                          log_every=1000, verbose=True):
-    """Train a PINN on the 2D Helmholtz equation."""
     model.to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, T_max=n_epochs, eta_min=lr_min)
-
-    (x1_int, x2_int), (x1_bc, x2_bc, u_bc) = \
-        sample_helmholtz_domain(n_int, n_bc, method=sampling_method)
-
+    (x1_int, x2_int), (x1_bc, x2_bc, u_bc) =        sample_helmholtz_domain(n_int, n_bc, method=sampling_method)
     loss_hist, pde_hist, bc_hist = [], [], []
     start = time.time()
-
     for epoch in range(n_epochs):
         optimizer.zero_grad()
         res = helmholtz_residual(model, x1_int, x2_int, k_sq)
         loss_pde = torch.mean(res ** 2)
-
         u_bc_pred = model(x1_bc, x2_bc)
         loss_bc = torch.mean((u_bc_pred - u_bc) ** 2)
-
         loss = w_pde * loss_pde + w_bc * loss_bc
         loss.backward()
         optimizer.step()
         scheduler.step()
-
         loss_hist.append(loss.item())
         pde_hist.append(loss_pde.item())
         bc_hist.append(loss_bc.item())
-
         if verbose and (epoch % log_every == 0 or epoch == n_epochs - 1):
             print(f"  [{epoch:6d}/{n_epochs}] Loss={loss.item():.4e} "
                   f"PDE={loss_pde.item():.4e} BC={loss_bc.item():.4e}")
-
     return {
         "model": model,
         "loss_history": loss_hist,
@@ -402,42 +243,23 @@ def train_helmholtz_pinn(model, n_epochs=15000, lr=1e-3, lr_min=1e-5,
         "bc_loss_history": bc_hist,
         "training_time": time.time() - start,
     }
-
-
 def evaluate_helmholtz(model, nx=100, ny=100):
-    """Evaluate Helmholtz PINN on a regular grid."""
     x1 = np.linspace(-1, 1, nx)
     x2 = np.linspace(-1, 1, ny)
     X1, X2 = np.meshgrid(x1, x2, indexing="ij")
-
     x1_t = torch.tensor(X1.flatten()[:, None], dtype=DTYPE, device=DEVICE)
     x2_t = torch.tensor(X2.flatten()[:, None], dtype=DTYPE, device=DEVICE)
-
     model.eval()
     with torch.no_grad():
         u_pred = model(x1_t, x2_t).cpu().numpy().reshape(nx, ny)
-
     u_exact = helmholtz_exact(X1, X2)
     l2 = np.linalg.norm(u_pred - u_exact) / (np.linalg.norm(u_exact) + 1e-30)
     return {"x1": x1, "x2": x2, "u_pred": u_pred, "u_exact": u_exact,
             "l2_error": l2, "pointwise_error": np.abs(u_pred - u_exact)}
-
-
-# ===================================================================
-# HEAT EQUATION (1D)
-# u_t = α · u_xx,  x ∈ [0,1], t ∈ [0,T]
-# IC: u(x,0) = sin(πx)
-# BC: u(0,t) = u(1,t) = 0
-# Exact: u(x,t) = exp(−α π² t) sin(πx)
-# ===================================================================
-
 HEAT_ALPHA = 0.01
 HEAT_X_RANGE = (0.0, 1.0)
 HEAT_T_RANGE = (0.0, 1.0)
-
-
 def heat_residual(model, x, t, alpha=HEAT_ALPHA):
-    """r = u_t − α·u_xx."""
     u = model(x, t)
     ones = torch.ones_like(u)
     u_t = torch.autograd.grad(u, t, ones, create_graph=True, retain_graph=True)[0]
@@ -445,31 +267,21 @@ def heat_residual(model, x, t, alpha=HEAT_ALPHA):
     u_xx = torch.autograd.grad(u_x, x, torch.ones_like(u_x),
                                 create_graph=True, retain_graph=True)[0]
     return u_t - alpha * u_xx
-
-
 def heat_exact(x, t, alpha=HEAT_ALPHA):
-    """Exact solution for the heat equation."""
     return np.exp(-alpha * np.pi**2 * t) * np.sin(np.pi * x)
-
-
 def heat_exact_torch(x, t, alpha=HEAT_ALPHA):
     return torch.exp(-alpha * np.pi**2 * t) * torch.sin(np.pi * x)
-
-
 def sample_heat_domain(n_int, n_ic, n_bc, x_range=HEAT_X_RANGE,
                        t_range=HEAT_T_RANGE):
-    """Sample points for the heat equation."""
     x_int = (torch.rand(n_int, 1, device=DEVICE, dtype=DTYPE)
              * (x_range[1] - x_range[0]) + x_range[0]).requires_grad_(True)
     t_int = (torch.rand(n_int, 1, device=DEVICE, dtype=DTYPE)
              * (t_range[1] - t_range[0]) + t_range[0]).requires_grad_(True)
-
     x_ic = torch.linspace(x_range[0], x_range[1], n_ic, device=DEVICE,
                            dtype=DTYPE).unsqueeze(1).requires_grad_(True)
     t_ic = torch.full((n_ic, 1), t_range[0], device=DEVICE,
                        dtype=DTYPE).requires_grad_(True)
     u_ic = torch.sin(np.pi * x_ic).detach()
-
     n_half = n_bc // 2
     t_bc_vals = torch.linspace(t_range[0], t_range[1], n_half,
                                 device=DEVICE, dtype=DTYPE).unsqueeze(1)
@@ -478,88 +290,58 @@ def sample_heat_domain(n_int, n_ic, n_bc, x_range=HEAT_X_RANGE,
     x_bc = torch.cat([x_bc_left, x_bc_right], dim=0).requires_grad_(True)
     t_bc = torch.cat([t_bc_vals, t_bc_vals.clone()], dim=0).requires_grad_(True)
     u_bc = torch.zeros(n_half * 2, 1, device=DEVICE, dtype=DTYPE)
-
     return (x_int, t_int), (x_ic, t_ic, u_ic), (x_bc, t_bc, u_bc)
-
-
 def train_heat_pinn(model, alpha=HEAT_ALPHA, n_epochs=20000, lr=1e-3,
                     lr_min=1e-5, n_int=5000, n_ic=200, n_bc=200,
                     x_range=HEAT_X_RANGE, t_range=HEAT_T_RANGE,
                     w_pde=1.0, w_ic=10.0, w_bc=1.0,
                     log_every=2000, verbose=True):
-    """Train a heat equation PINN."""
     model.to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, T_max=n_epochs, eta_min=lr_min)
-
-    (x_int, t_int), (x_ic, t_ic, u_ic), (x_bc, t_bc, u_bc) = \
-        sample_heat_domain(n_int, n_ic, n_bc, x_range, t_range)
-
+    (x_int, t_int), (x_ic, t_ic, u_ic), (x_bc, t_bc, u_bc) =        sample_heat_domain(n_int, n_ic, n_bc, x_range, t_range)
     loss_hist, pde_hist, ic_hist, bc_hist = [], [], [], []
     start = time.time()
-
     for epoch in range(n_epochs):
         optimizer.zero_grad()
         res = heat_residual(model, x_int, t_int, alpha)
         loss_pde = torch.mean(res ** 2)
-
         u_ic_pred = model(x_ic, t_ic)
         loss_ic = torch.mean((u_ic_pred - u_ic) ** 2)
-
         u_bc_pred = model(x_bc, t_bc)
         loss_bc = torch.mean((u_bc_pred - u_bc) ** 2)
-
         loss = w_pde * loss_pde + w_ic * loss_ic + w_bc * loss_bc
         loss.backward()
         optimizer.step()
         scheduler.step()
-
         loss_hist.append(loss.item())
         pde_hist.append(loss_pde.item())
         ic_hist.append(loss_ic.item())
         bc_hist.append(loss_bc.item())
-
         if verbose and (epoch % log_every == 0 or epoch == n_epochs - 1):
             print(f"  [{epoch:6d}/{n_epochs}] Loss={loss.item():.4e} "
                   f"PDE={loss_pde.item():.4e} IC={loss_ic.item():.4e} "
                   f"BC={loss_bc.item():.4e}")
-
     return {
         "model": model, "loss_history": loss_hist,
         "pde_loss_history": pde_hist, "ic_loss_history": ic_hist,
         "bc_loss_history": bc_hist, "training_time": time.time() - start,
     }
-
-
 def evaluate_heat(model, alpha=HEAT_ALPHA, nx=200, nt=100,
                   x_range=HEAT_X_RANGE, t_range=HEAT_T_RANGE):
-    """Evaluate heat PINN on grid."""
     x = np.linspace(x_range[0], x_range[1], nx)
     t = np.linspace(t_range[0], t_range[1], nt)
     X, T = np.meshgrid(x, t, indexing="ij")
-
     x_t = torch.tensor(X.flatten()[:, None], dtype=DTYPE, device=DEVICE)
     t_t = torch.tensor(T.flatten()[:, None], dtype=DTYPE, device=DEVICE)
-
     model.eval()
     with torch.no_grad():
         u_pred = model(x_t, t_t).cpu().numpy().reshape(nx, nt)
-
     u_exact = heat_exact(X, T, alpha)
     l2 = np.linalg.norm(u_pred - u_exact) / (np.linalg.norm(u_exact) + 1e-30)
     return {"x": x, "t": t, "u_pred": u_pred, "u_exact": u_exact, "l2_error": l2}
-
-
-# ===================================================================
-# ALLEN-CAHN EQUATION (1D)
-# u_t = ε² u_xx + u − u³,  x ∈ [-1,1], t ∈ [0,1]
-# IC: u(x,0) = x² cos(πx)
-# BC: u(-1,t) = u(1,t) = -1
-# ===================================================================
-
 def allen_cahn_residual(model, x, t, epsilon):
-    """r = u_t − ε²·u_xx − u + u³."""
     u = model(x, t)
     ones = torch.ones_like(u)
     u_t = torch.autograd.grad(u, t, ones, create_graph=True, retain_graph=True)[0]
@@ -567,54 +349,33 @@ def allen_cahn_residual(model, x, t, epsilon):
     u_xx = torch.autograd.grad(u_x, x, torch.ones_like(u_x),
                                 create_graph=True, retain_graph=True)[0]
     return u_t - epsilon**2 * u_xx - u + u**3
-
-
 def allen_cahn_ic(x):
-    """IC: u(x,0) = x² cos(πx)."""
     return x**2 * torch.cos(np.pi * x)
-
-
 def solve_allen_cahn_reference(epsilon, nx=512, nt=201, t_end=1.0):
-    """
-    Solve Allen-Cahn numerically via method of lines + RK45.
-
-    Returns x, t, u arrays.
-    """
     from scipy.integrate import solve_ivp
-
     x = np.linspace(-1, 1, nx)
     dx = x[1] - x[0]
     u0 = x**2 * np.cos(np.pi * x)
-
     def rhs(t_val, u):
-        # Second-order finite differences for u_xx
         u_xx = np.zeros_like(u)
         u_xx[1:-1] = (u[2:] - 2 * u[1:-1] + u[:-2]) / dx**2
-        # BC: u(-1) = u(1) = -1
         u_xx[0] = (u[1] - 2 * u[0] + (-1)) / dx**2
         u_xx[-1] = ((-1) - 2 * u[-1] + u[-2]) / dx**2
         return epsilon**2 * u_xx + u - u**3
-
     t_eval = np.linspace(0, t_end, nt)
     sol = solve_ivp(rhs, [0, t_end], u0, t_eval=t_eval, method="RK45",
                     rtol=1e-8, atol=1e-10, max_step=dx**2 / (2 * epsilon**2 + 0.01))
-
     if sol.success:
-        return x, sol.t, sol.y  # y shape: (nx, nt)
+        return x, sol.t, sol.y
     else:
         print(f"  Warning: Allen-Cahn solver did not converge for ε={epsilon}")
         return x, sol.t, sol.y
-
-
 def sample_allen_cahn_domain(n_int, n_ic, n_bc):
-    """Sample points for Allen-Cahn."""
     x_int = (torch.rand(n_int, 1, device=DEVICE, dtype=DTYPE) * 2 - 1).requires_grad_(True)
     t_int = torch.rand(n_int, 1, device=DEVICE, dtype=DTYPE).requires_grad_(True)
-
     x_ic = torch.linspace(-1, 1, n_ic, device=DEVICE, dtype=DTYPE).unsqueeze(1).requires_grad_(True)
     t_ic = torch.zeros(n_ic, 1, device=DEVICE, dtype=DTYPE).requires_grad_(True)
     u_ic = allen_cahn_ic(x_ic).detach()
-
     n_half = n_bc // 2
     t_bc_vals = torch.linspace(0, 1, n_half, device=DEVICE, dtype=DTYPE).unsqueeze(1)
     x_bc = torch.cat([
@@ -623,66 +384,47 @@ def sample_allen_cahn_domain(n_int, n_ic, n_bc):
     ], dim=0).requires_grad_(True)
     t_bc = torch.cat([t_bc_vals, t_bc_vals.clone()], dim=0).requires_grad_(True)
     u_bc = torch.full((n_half * 2, 1), -1.0, device=DEVICE, dtype=DTYPE)
-
     return (x_int, t_int), (x_ic, t_ic, u_ic), (x_bc, t_bc, u_bc)
-
-
 def train_allen_cahn_pinn(model, epsilon, n_epochs=20000, lr=1e-3, lr_min=1e-5,
                           n_int=10000, n_ic=200, n_bc=200,
                           w_pde=1.0, w_ic=10.0, w_bc=1.0,
                           log_every=2000, verbose=True):
-    """Train an Allen-Cahn PINN."""
     model.to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, T_max=n_epochs, eta_min=lr_min)
-
-    (x_int, t_int), (x_ic, t_ic, u_ic), (x_bc, t_bc, u_bc) = \
-        sample_allen_cahn_domain(n_int, n_ic, n_bc)
-
+    (x_int, t_int), (x_ic, t_ic, u_ic), (x_bc, t_bc, u_bc) =        sample_allen_cahn_domain(n_int, n_ic, n_bc)
     loss_hist = []
     start = time.time()
-
     for epoch in range(n_epochs):
         optimizer.zero_grad()
         res = allen_cahn_residual(model, x_int, t_int, epsilon)
         loss_pde = torch.mean(res ** 2)
-
         u_ic_pred = model(x_ic, t_ic)
         loss_ic = torch.mean((u_ic_pred - u_ic) ** 2)
-
         u_bc_pred = model(x_bc, t_bc)
         loss_bc = torch.mean((u_bc_pred - u_bc) ** 2)
-
         loss = w_pde * loss_pde + w_ic * loss_ic + w_bc * loss_bc
         loss.backward()
         optimizer.step()
         scheduler.step()
-
         loss_hist.append(loss.item())
-
         if verbose and (epoch % log_every == 0 or epoch == n_epochs - 1):
             print(f"  [{epoch:6d}/{n_epochs}] Loss={loss.item():.4e} "
                   f"PDE={loss_pde.item():.4e} IC={loss_ic.item():.4e} "
                   f"BC={loss_bc.item():.4e}")
-
     return {
         "model": model, "loss_history": loss_hist,
         "training_time": time.time() - start,
     }
-
-
 def evaluate_allen_cahn(model, x_ref, t_ref, u_ref):
-    """Evaluate Allen-Cahn PINN against reference."""
     nx = len(x_ref)
     nt = len(t_ref)
     X, T = np.meshgrid(x_ref, t_ref, indexing="ij")
     x_t = torch.tensor(X.flatten()[:, None], dtype=DTYPE, device=DEVICE)
     t_t = torch.tensor(T.flatten()[:, None], dtype=DTYPE, device=DEVICE)
-
     model.eval()
     with torch.no_grad():
         u_pred = model(x_t, t_t).cpu().numpy().reshape(nx, nt)
-
     l2 = np.linalg.norm(u_pred - u_ref) / (np.linalg.norm(u_ref) + 1e-30)
     return {"u_pred": u_pred, "l2_error": l2}
