@@ -1,39 +1,3 @@
-"""
-exp13_initialization_failure.py — Initialization Failure Study
-
-Systematic study of how weight initialization affects PINN training for
-the Burgers equation. Trains 50 independent runs for each strategy:
-  - Xavier (normal)
-  - He (Kaiming normal)
-  - Random normal with std ∈ [0.001, 0.01, 0.1, 1.0, 10.0]
-  - Orthogonal
-
-For each run, records:
-  - Initial loss, final loss, full training trajectory
-  - Whether training converged or diverged
-  - Final L2 error
-
-Identifies metastability failure regions: init strategies that produce
-bimodal outcome distributions (sometimes good, sometimes catastrophic).
-
-Outputs (results/exp13/):
-  - error_histograms.png
-  - loss_trajectories.png
-  - convergence_summary.png
-  - metastability_analysis.png
-  - exp13_results.json
-
-PAUSE / RESUME:
-  - Progress is saved to results/exp13/checkpoint.json after every
-    completed seed run.
-  - To pause: hit Ctrl+C at any time. The current seed will be
-    abandoned cleanly; all previously completed seeds are safe.
-  - To resume: simply re-run the script. It will detect the checkpoint
-    and skip all already-completed (strategy, seed) pairs.
-  - To force a full restart: delete results/exp13/checkpoint.json
-    (or the entire results/exp13/ folder).
-"""
-
 import sys, os, json, signal
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -55,16 +19,9 @@ from pinn_equations import (
 from plot_utils import savefig, setup_style
 
 setup_style()
-
-# ===================================================================
-# Speed flags (safe for RTX 3050)
-# ===================================================================
 torch.backends.cudnn.benchmark = True
 torch.set_float32_matmul_precision("medium")
 
-# ===================================================================
-# Config
-# ===================================================================
 N_HIDDEN = 4
 N_NEURONS = 64
 N_EPOCHS = 20000
@@ -77,10 +34,6 @@ RANDOM_STDS = [0.001, 0.01, 0.1, 1.0, 10.0]
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "results" / "exp13"
 CHECKPOINT_PATH = OUTPUT_DIR / "checkpoint.json"
 
-# ===================================================================
-# Graceful interrupt handling
-# ===================================================================
-# Set this flag via Ctrl+C — the training loop checks it between seeds.
 _STOP_REQUESTED = False
 
 def _handle_sigint(sig, frame):
@@ -95,34 +48,14 @@ def _handle_sigint(sig, frame):
 
 signal.signal(signal.SIGINT, _handle_sigint)
 
-# ===================================================================
-# Checkpoint helpers
-# ===================================================================
+
 
 def load_checkpoint():
-    """
-    Load the checkpoint file if it exists.
 
-    Checkpoint structure:
-    {
-      "completed": {
-          "<strategy>": {
-              "<seed_int>": {
-                  "l2_error": float,
-                  "init_loss": float,
-                  "final_loss": float,
-                  "trajectory": [float, ...],   # subsampled
-                  "status": str
-              }
-          }
-      },
-      "config": { ... }   # saved for sanity-check on resume
-    }
-    """
     if CHECKPOINT_PATH.exists():
         with open(CHECKPOINT_PATH, "r") as f:
             ckpt = json.load(f)
-        # Convert seed keys back to int
+
         ckpt["completed"] = {
             strat: {int(k): v for k, v in seeds.items()}
             for strat, seeds in ckpt["completed"].items()
@@ -136,7 +69,7 @@ def load_checkpoint():
 
 
 def save_checkpoint(ckpt):
-    """Atomically write checkpoint to disk."""
+
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     tmp_path = CHECKPOINT_PATH.with_suffix(".tmp")
     with open(tmp_path, "w") as f:
@@ -145,13 +78,13 @@ def save_checkpoint(ckpt):
 
 
 def is_done(ckpt, strategy, seed):
-    """Return True if this (strategy, seed) pair is already in checkpoint."""
+
     return seed in ckpt["completed"].get(strategy, {})
 
 
 def record_run(ckpt, strategy, seed, l2_error, init_loss,
                final_loss, trajectory, status):
-    """Add one completed run to the checkpoint and save."""
+
     if strategy not in ckpt["completed"]:
         ckpt["completed"][strategy] = {}
     ckpt["completed"][strategy][seed] = {
@@ -165,10 +98,7 @@ def record_run(ckpt, strategy, seed, l2_error, init_loss,
 
 
 def reconstruct_results_from_checkpoint(ckpt, strategies, strategy_labels):
-    """
-    Re-build the all_results dict from a fully-completed (or partial)
-    checkpoint so that plotting works without re-running anything.
-    """
+
     all_results = {}
     for strat in strategies:
         label = strategy_labels[strat]
@@ -186,7 +116,7 @@ def reconstruct_results_from_checkpoint(ckpt, strategies, strategy_labels):
                 trajectories.append(d["trajectory"])
                 statuses.append(d["status"])
             else:
-                # Seed not yet done — fill with NaN placeholders
+    
                 l2_errors.append(float("nan"))
                 init_losses.append(float("nan"))
                 final_losses.append(float("nan"))
@@ -194,7 +124,7 @@ def reconstruct_results_from_checkpoint(ckpt, strategies, strategy_labels):
                 statuses.append("pending")
 
         valid_errors = [e for e in l2_errors
-                        if np.isfinite(e) and e == e]  # not nan
+                        if np.isfinite(e) and e == e]  
         n_converged  = statuses.count("converged")
         n_diverged   = statuses.count("diverged")
         n_stagnated  = statuses.count("stagnated")
@@ -222,9 +152,6 @@ def reconstruct_results_from_checkpoint(ckpt, strategies, strategy_labels):
     return all_results
 
 
-# ===================================================================
-# Initialization strategies
-# ===================================================================
 
 def apply_init(model, strategy):
     for m in model.modules():
@@ -332,9 +259,6 @@ def detect_bimodality(errors, threshold_ratio=3.0):
     return bimodal, separation
 
 
-# ===================================================================
-# Main experiment
-# ===================================================================
 
 def run_experiment():
     global _STOP_REQUESTED
@@ -348,14 +272,14 @@ def run_experiment():
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Load reference data for L2 evaluation
+  
     try:
         x_ref, t_ref, u_ref = load_burgers_reference()
     except FileNotFoundError:
         print("  ⚠  Reference not found. L2 errors will be NaN.")
         x_ref, t_ref, u_ref = None, None, None
 
-    # Strategy list
+
     strategies = ["xavier", "he", "orthogonal"]
     for std in RANDOM_STDS:
         strategies.append(f"normal_{std}")
@@ -368,12 +292,9 @@ def run_experiment():
     for std in RANDOM_STDS:
         strategy_labels[f"normal_{std}"] = f"Normal(σ={std})"
 
-    # ----------------------------------------------------------------
-    # Load checkpoint (or start fresh)
-    # ----------------------------------------------------------------
+
     ckpt = load_checkpoint()
 
-    # Save config into checkpoint for sanity-check on future resumes
     ckpt["config"] = {
         "strategies": strategies,
         "n_seeds":    N_SEEDS,
@@ -382,9 +303,6 @@ def run_experiment():
     }
     save_checkpoint(ckpt)
 
-    # ----------------------------------------------------------------
-    # Main training loop
-    # ----------------------------------------------------------------
     total_runs    = len(strategies) * N_SEEDS
     completed_now = sum(len(v) for v in ckpt["completed"].values())
 
@@ -412,7 +330,7 @@ def run_experiment():
             model = create_model_with_init(strat, seed)
             init_loss, final_loss, loss_hist = train_single_run(model)
 
-            # Evaluate L2
+    
             l2 = float("nan")
             if x_ref is not None:
                 try:
@@ -420,7 +338,7 @@ def run_experiment():
                 except Exception:
                     l2 = float("nan")
 
-            # Classify
+  
             if not np.isfinite(final_loss) or final_loss > DIVERGENCE_THRESHOLD:
                 status = "diverged"
             elif np.isfinite(l2) and l2 < CONVERGENCE_THRESHOLD:
@@ -428,11 +346,11 @@ def run_experiment():
             else:
                 status = "stagnated"
 
-            # Subsample trajectory before storing
+
             step = max(1, len(loss_hist) // 500)
             traj_sub = [float(v) for v in loss_hist[::step]]
 
-            # ---- Save this seed to checkpoint immediately ----
+
             record_run(ckpt, strat, seed,
                        l2_error   = float(l2),
                        init_loss  = float(init_loss),
@@ -448,9 +366,7 @@ def run_experiment():
                   f"final_loss={final_loss:.4e} | "
                   f"total progress: {completed_now}/{total_runs} ({pct:.1f}%)")
 
-    # ----------------------------------------------------------------
-    # Check if everything is done
-    # ----------------------------------------------------------------
+
     total_done = sum(len(v) for v in ckpt["completed"].values())
     all_done   = (total_done == total_runs)
 
@@ -462,22 +378,16 @@ def run_experiment():
         print(f"{'=' * 70}")
         return None
 
-    # ----------------------------------------------------------------
-    # Reconstruct all_results from checkpoint (works for partial too)
-    # ----------------------------------------------------------------
     all_results = reconstruct_results_from_checkpoint(
         ckpt, strategies, strategy_labels)
 
-    # Bimodality summary
+
     metastable_strategies = [
         s for s in strategies if all_results[s]["is_bimodal"]
     ]
     print(f"\n  ★ Metastable (bimodal) strategies: "
           f"{[strategy_labels[s] for s in metastable_strategies]}")
 
-    # ----------------------------------------------------------------
-    # Plots  (only run when all seeds are done)
-    # ----------------------------------------------------------------
     if not all_done:
         print("\n  ⚠  Not all seeds done — skipping final plots.")
         print(f"     Re-run to complete and generate plots.")
@@ -489,7 +399,7 @@ def run_experiment():
     ncols = 4
     nrows = (n_strats + ncols - 1) // ncols
 
-    # 1. Error histograms
+
     fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 4 * nrows))
     axes = axes.flatten()
     for i, strat in enumerate(strategies):
@@ -512,7 +422,6 @@ def run_experiment():
                  fontweight="bold", fontsize=14)
     savefig(fig, OUTPUT_DIR / "error_histograms.png")
 
-    # 2. Loss trajectories
     fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 4 * nrows))
     axes = axes.flatten()
     for i, strat in enumerate(strategies):
@@ -538,7 +447,6 @@ def run_experiment():
                  fontweight="bold", fontsize=14)
     savefig(fig, OUTPUT_DIR / "loss_trajectories.png")
 
-    # 3. Convergence summary
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
     labels = [all_results[s]["label"] for s in strategies]
     x_pos  = np.arange(len(strategies))
@@ -584,7 +492,6 @@ def run_experiment():
                  fontweight="bold", fontsize=14)
     savefig(fig, OUTPUT_DIR / "convergence_summary.png")
 
-    # 4. Metastability violin
     fig, ax = plt.subplots(figsize=(14, 7))
     violin_data   = []
     violin_labels = []
@@ -616,9 +523,6 @@ def run_experiment():
     ax.legend()
     savefig(fig, OUTPUT_DIR / "metastability_analysis.png")
 
-    # ----------------------------------------------------------------
-    # Save final JSON results
-    # ----------------------------------------------------------------
     results = {
         "experiment":          "Initialization Failure Study",
         "n_seeds":             N_SEEDS,
