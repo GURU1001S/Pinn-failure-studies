@@ -1,61 +1,3 @@
-"""
-exp14_optimizer_failure.py — Optimizer-Induced Failure Study
-[v2 — journal-ready fixes]
-
-Trains the same Burgers PINN architecture with different optimizers:
-  - Adam (lr=1e-3, 1e-4, 1e-2)
-  - L-BFGS
-  - RMSprop
-  - SGD with momentum
-  - Adam→L-BFGS hybrid at switch points 10000, 20000, 30000
-
-For each, records:
-  - Full loss trajectory
-  - Final L2 error (mean ± std over N_SEEDS seeds)
-  - Per-component loss breakdown
-  - Failure mode signature
-
-Outputs (results/exp14/):
-  - loss_trajectories.png
-  - final_l2_comparison.png       (error bars)
-  - adam_lbfgs_switch_analysis.png
-  - failure_signatures.png
-  - exp14_results.json
-
-FIXES vs v1 (journal-ready):
-  [FIX 1] Equalized compute budget — v1 gave L-BFGS 2000 steps vs
-          40000 for Adam. Each L-BFGS step calls the loss/grad closure
-          up to LBFGS_MAX_ITER=20 times internally, so 2000 L-BFGS
-          steps ≈ 40000 gradient evaluations. v2 sets LBFGS steps so
-          gradient evaluations are matched: N_LBFGS_STEPS =
-          N_EPOCHS_TOTAL // LBFGS_MAX_ITER. Failure comparison is now
-          fair. Applied same equalization to hybrid L-BFGS phase.
-
-  [FIX 2] Multi-seed evaluation — v1 ran each config once (seed=42).
-          v2 runs N_SEEDS=3 seeds per optimizer config and reports
-          mean ± std L2. A single bad seed can misclassify a success
-          as failure — multi-seed prevents this.
-
-  [FIX 3] Fixed stagnation_ratio metric — v1 computed late/early loss
-          ratio. If early loss is near zero (well-converged early),
-          ratio → inf. If both are small, ratio ≈ 1 implying stagnation
-          for a correctly converged model. v2 uses:
-          stagnation = (early_mean - late_mean) / (early_mean + 1e-30)
-          This gives 0 = no progress, 1 = full convergence, negative =
-          loss increased. Physically meaningful and bounded.
-
-  [FIX 4] Fixed hybrid L-BFGS budget — v1 gave shrinking L-BFGS
-          budget as switch point increased: switch=10k → 2000 steps,
-          switch=30k → 1000 steps. This confounded "later switch is
-          worse" with "later switch gets less L-BFGS compute". v2 gives
-          all hybrid configs the same fixed LBFGS_STEPS_HYBRID budget
-          regardless of switch point.
-
-  [FIX 5] Failure mode classification uses multi-seed mean L2 and
-          the corrected stagnation metric, with explicit thresholds
-          documented in JSON.
-"""
-
 import sys, os, json, signal
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -77,41 +19,30 @@ from plot_utils import savefig, setup_style
 
 setup_style()
 
-# ===================================================================
-# Speed flags
-# ===================================================================
 torch.backends.cudnn.benchmark = True
 torch.set_float32_matmul_precision("medium")
 
-# ===================================================================
-# Config
-# ===================================================================
 N_HIDDEN        = 4
 N_NEURONS       = 64
 N_EPOCHS_TOTAL  = 40000
 N_INT           = 10000
 N_IC            = 200
 N_BC            = 200
-N_SEEDS         = 3           # FIX 2: multi-seed
+N_SEEDS         = 3          
 
-# FIX 1: equalized L-BFGS budget
-LBFGS_MAX_ITER  = 20          # closure calls per step
-N_LBFGS_STEPS   = N_EPOCHS_TOTAL // LBFGS_MAX_ITER  # = 2000 steps ≈ 40k grad evals
+LBFGS_MAX_ITER  = 20       
+N_LBFGS_STEPS   = N_EPOCHS_TOTAL // LBFGS_MAX_ITER  
 
-# FIX 4: fixed hybrid L-BFGS budget regardless of switch point
-LBFGS_STEPS_HYBRID = 1000     # same for all switch points
+LBFGS_STEPS_HYBRID = 1000    
 
 SWITCH_POINTS   = [10000, 20000, 30000]
 
-# FIX 3: stagnation/oscillation thresholds
-STAGNATION_THRESHOLD   = 0.05  # improvement < 5% → stagnated
-OSCILLATION_THRESHOLD  = 0.3   # normalized std > 0.3 → oscillating
+STAGNATION_THRESHOLD   = 0.05  
+OSCILLATION_THRESHOLD  = 0.3   
 
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "results" / "exp14"
 
-# ===================================================================
-# Graceful interrupt & Checkpoint handling
-# ===================================================================
+
 CHECKPOINT_PATH = OUTPUT_DIR / "checkpoint.json"
 _STOP_REQUESTED = False
 
@@ -148,21 +79,9 @@ def save_checkpoint(ckpt):
     tmp_path.replace(CHECKPOINT_PATH)
 
 
-# ===================================================================
-# FIX 3 — Corrected failure metrics
-# ===================================================================
 
 def compute_stagnation(loss_hist, window=2000):
-    """
-    Stagnation = fractional improvement from early to late training.
-    = (early_mean - late_mean) / (early_mean + eps)
 
-    Range: ~1 = full convergence, ~0 = no progress,
-           negative = loss increased (diverging tail).
-
-    v1 used late/early which gives inf when early ≈ 0 and ~1 for
-    well-converged models (falsely implying stagnation).
-    """
     if len(loss_hist) < 2 * window:
         return float("nan")
     early = float(np.mean(loss_hist[:window]))
@@ -171,7 +90,7 @@ def compute_stagnation(loss_hist, window=2000):
 
 
 def compute_oscillation(loss_hist, window=2000):
-    """Normalized std of the loss tail. High = oscillating/unstable."""
+ 
     if len(loss_hist) < window:
         return float("nan")
     tail = np.array(loss_hist[-window:])
@@ -180,9 +99,7 @@ def compute_oscillation(loss_hist, window=2000):
 
 def classify_failure(mean_l2, stagnation, oscillation,
                      l2_fail=0.5):
-    """
-    FIX 5: classify using corrected metrics and multi-seed mean L2.
-    """
+
     if not np.isfinite(mean_l2) or mean_l2 > l2_fail * 10:
         return "divergence"
     elif oscillation > OSCILLATION_THRESHOLD:
@@ -195,9 +112,7 @@ def classify_failure(mean_l2, stagnation, oscillation,
         return "success"
 
 
-# ===================================================================
-# Shared domain sampling (same points across seeds for fair comparison)
-# ===================================================================
+
 
 def get_domain(seed):
     torch.manual_seed(seed)
@@ -205,9 +120,6 @@ def get_domain(seed):
     return sample_burgers_domain(N_INT, N_IC, N_BC)
 
 
-# ===================================================================
-# Training routines
-# ===================================================================
 
 def _burgers_loss(model, x_int, t_int, x_ic, t_ic, u_ic,
                    x_bc, t_bc, u_bc):
@@ -248,7 +160,7 @@ def train_adam(lr, seed, n_epochs=N_EPOCHS_TOTAL, log_every=10000):
 
 
 def train_lbfgs(seed, n_steps=N_LBFGS_STEPS, log_every=200):
-    """FIX 1: n_steps = N_EPOCHS_TOTAL // LBFGS_MAX_ITER for equal budget."""
+  
     torch.manual_seed(seed); np.random.seed(seed)
     model     = GenericPINN(in_dim=2, out_dim=1, n_hidden=N_HIDDEN,
                              n_neurons=N_NEURONS, activation="tanh").to(DEVICE)
@@ -344,12 +256,9 @@ def train_sgd(seed, lr=1e-2, momentum=0.9,
 
 
 def train_hybrid(switch_epoch, seed, adam_lr=1e-3,
-                 lbfgs_steps=LBFGS_STEPS_HYBRID,  # FIX 4: fixed budget
+                 lbfgs_steps=LBFGS_STEPS_HYBRID, 
                  n_total=N_EPOCHS_TOTAL, log_every=10000):
-    """
-    FIX 4: all hybrid configs get the same lbfgs_steps regardless of
-    switch point, so comparisons are not confounded by compute budget.
-    """
+
     torch.manual_seed(seed); np.random.seed(seed)
     model = GenericPINN(in_dim=2, out_dim=1, n_hidden=N_HIDDEN,
                          n_neurons=N_NEURONS, activation="tanh").to(DEVICE)
@@ -358,7 +267,7 @@ def train_hybrid(switch_epoch, seed, adam_lr=1e-3,
     loss_h, pde_h, ic_h, bc_h = [], [], [], []
     t0 = time.time()
 
-    # Phase 1: Adam
+
     opt_adam = torch.optim.Adam(model.parameters(), lr=adam_lr)
     sch_adam = torch.optim.lr_scheduler.CosineAnnealingLR(
         opt_adam, T_max=switch_epoch, eta_min=adam_lr * 0.01)
@@ -375,7 +284,7 @@ def train_hybrid(switch_epoch, seed, adam_lr=1e-3,
     loss_at_switch = loss_h[-1] if loss_h else float("nan")
     print(f"    → Switch at epoch {switch_epoch}, loss={loss_at_switch:.3e}")
 
-    # Phase 2: L-BFGS (FIX 4: fixed step count)
+ 
     opt_lbfgs = torch.optim.LBFGS(
         model.parameters(), lr=1.0, max_iter=LBFGS_MAX_ITER,
         line_search_fn="strong_wolfe", history_size=50)
@@ -406,12 +315,9 @@ def train_hybrid(switch_epoch, seed, adam_lr=1e-3,
                    "loss_at_switch": loss_at_switch}
 
 
-# ===================================================================
-# Run one optimizer config across N_SEEDS seeds
-# ===================================================================
 
 def run_config(ckpt, name, train_fn, x_ref, t_ref, u_ref):
-    """Run a training config across N_SEEDS seeds, return aggregated results."""
+
     print(f"\n{'━' * 60}")
     print(f"  Optimizer: {name}  ({N_SEEDS} seeds)")
     print(f"{'━' * 60}")
@@ -473,7 +379,6 @@ def run_config(ckpt, name, train_fn, x_ref, t_ref, u_ref):
 
         print(f"    Seed {seed}: L2={l2:.6f} stag={stag:.3f} osc={osc:.3f}")
 
-        # Save to checkpoint
         ckpt["completed"][name][str_seed] = {
             "l2": l2,
             "stag": stag,
@@ -513,9 +418,6 @@ def run_config(ckpt, name, train_fn, x_ref, t_ref, u_ref):
     }
 
 
-# ===================================================================
-# Main experiment
-# ===================================================================
 
 def run_experiment():
     print("=" * 70)
@@ -539,7 +441,6 @@ def run_experiment():
     ckpt = load_checkpoint()
     all_results = {}
 
-    # ── Adam variants ────────────────────────────────────────────────
     for lr in [1e-3, 1e-4, 1e-2]:
         if _STOP_REQUESTED: break
         name = f"Adam(lr={lr:.0e})"
@@ -550,7 +451,6 @@ def run_experiment():
         if res is not None:
             all_results[name] = res
 
-    # ── L-BFGS (FIX 1: equalized budget) ────────────────────────────
     if not _STOP_REQUESTED:
         res = run_config(
             ckpt, "L-BFGS",
@@ -559,7 +459,7 @@ def run_experiment():
         if res is not None:
             all_results["L-BFGS"] = res
 
-    # ── RMSprop ──────────────────────────────────────────────────────
+
     if not _STOP_REQUESTED:
         res = run_config(
             ckpt, "RMSprop",
@@ -568,7 +468,7 @@ def run_experiment():
         if res is not None:
             all_results["RMSprop"] = res
 
-    # ── SGD + Momentum ───────────────────────────────────────────────
+
     if not _STOP_REQUESTED:
         res = run_config(
             ckpt, "SGD+Momentum",
@@ -577,7 +477,6 @@ def run_experiment():
         if res is not None:
             all_results["SGD+Momentum"] = res
 
-    # ── Hybrids (FIX 4: fixed L-BFGS budget) ────────────────────────
     hybrid_results = {}
     for sw in SWITCH_POINTS:
         if _STOP_REQUESTED: break
@@ -600,7 +499,7 @@ def run_experiment():
         print(f"{'=' * 70}")
         return None
 
-    # Optimal switch point (by mean L2)
+
     valid_sw = {k: v for k, v in hybrid_results.items()
                 if np.isfinite(v["mean_l2"])}
     optimal_switch = (min(valid_sw, key=lambda k: valid_sw[k]["mean_l2"])
@@ -609,7 +508,6 @@ def run_experiment():
     print(f"\n  ★ Optimal switch: {optimal_switch}  "
           f"(Adam-only baseline L2={adam_ref_l2:.6f})")
 
-    # ── Plots ────────────────────────────────────────────────────────
     print("\n── Generating plots ──")
     names  = list(all_results.keys())
     colors = plt.cm.tab10(np.linspace(0, 1, len(names)))
@@ -622,7 +520,6 @@ def run_experiment():
         "insufficient_convergence":"#795548",
     }
 
-    # 1. Loss trajectories
     fig, ax = plt.subplots(figsize=(14, 7))
     for idx, (name, data) in enumerate(all_results.items()):
         hist = data["loss_history"]
@@ -641,7 +538,6 @@ def run_experiment():
     ax.legend(loc="upper right", fontsize=8, ncol=2)
     savefig(fig, OUTPUT_DIR / "loss_trajectories.png")
 
-    # 2. Final L2 comparison (mean ± std, FIX 2)
     fig, ax = plt.subplots(figsize=(13, 6))
     means  = [all_results[n]["mean_l2"] for n in names]
     stds   = [all_results[n]["std_l2"]  for n in names]
@@ -673,7 +569,6 @@ def run_experiment():
                     f"{mean:.4f}", ha="center", va="bottom", fontsize=7)
     savefig(fig, OUTPUT_DIR / "final_l2_comparison.png")
 
-    # 3. Switch analysis (FIX 4: same LBFGS budget annotated)
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 
     ax = axes[0]
@@ -699,7 +594,6 @@ def run_experiment():
     ax.legend(fontsize=9)
 
     ax = axes[1]
-    # Per-component final loss for top configs
     top_names = [f"Adam(lr={1e-3:.0e})", "L-BFGS", "RMSprop", "SGD+Momentum"]
     if optimal_switch:
         top_names.append(f"Adam→LBFGS@{optimal_switch}")
@@ -724,8 +618,6 @@ def run_experiment():
     fig.suptitle("Adam → L-BFGS Switch Analysis",
                  fontweight="bold", fontsize=14)
     savefig(fig, OUTPUT_DIR / "adam_lbfgs_switch_analysis.png")
-
-    # 4. Failure signatures
     fig, ax = plt.subplots(figsize=(11, 7))
     for name, data in all_results.items():
         s  = data["mean_stagnation"]
@@ -755,7 +647,6 @@ def run_experiment():
     ax.legend(fontsize=9)
     savefig(fig, OUTPUT_DIR / "failure_signatures.png")
 
-    # ── JSON ─────────────────────────────────────────────────────────
     results = {
         "experiment": "Optimizer-Induced Failure Study",
         "version":    "v2-journal-ready",
