@@ -1,68 +1,5 @@
-"""
-exp6_gradient_flow.py — Gradient Flow & Conflict Analysis
-[v2 — journal-ready fixes]
-
-Trains Burgers PINN with Adam for 50000 iterations.
-Every 500 iterations, records full gradient vectors for each loss
-component (PDE, IC, BC) separately. Computes pairwise cosine
-similarity between these gradients over time.
-
-Tests the hypothesis: gradient conflict (negative cosine similarity)
-between IC and PDE loss causes failure.
-
-Outputs (results/exp6/):
-  - cosine_similarity_over_time.png   (annotated early + late conflict)
-  - cosine_similarity_heatmaps.png    (4×5 grid covering full training)
-  - conflict_analysis.png             (phase bars + variance + fraction)
-  - exp6_results.json
-
-FIXES vs v1 (journal-ready):
-  [FIX 1] peak_conflict.cosine_pde_bc — v1 used argmin(cos_pde_bc)
-          instead of the PDE-BC value at the epoch of peak PDE-IC
-          conflict. This reported -0.89 (from epoch 500) when the
-          actual value at epoch 1500 was +0.59 — a factual
-          misrepresentation. v2 reports all three cosine values at
-          the same epoch (the peak PDE-IC conflict epoch).
-
-  [FIX 2] Late-stage conflict re-emergence — v1 did not document or
-          analyse the return of strong PDE-IC conflict (cos → -0.99)
-          in epochs 38000–49000. v2 detects this automatically,
-          reports it in JSON with its own section, and annotates the
-          time-series plot.
-
-  [FIX 3] Heatmap coverage — v1 plotted only 10 snapshots covering
-          epochs 0–23000, completely missing late-stage conflict.
-          v2 plots a 4×5 grid of 20 snapshots spanning the full
-          50000-epoch range.
-
-  [FIX 4] IC weight provenance — training uses w_ic=10.0 (10× IC
-          weighting) but gradient tracking records UNWEIGHTED per-
-          component gradients. v2 documents this mismatch explicitly
-          in JSON so reviewers understand what is being measured.
-
-  [FIX 5] Reproducibility — v1 set no random seed. v2 sets both
-          torch and numpy seeds.
-
-  [FIX 6] JSON metadata — v1 missing version, config, training_time,
-          figure_notes. v2 adds all of these.
-
-  [FIX 7] Hypothesis test — v1 used a single-point threshold
-          (min < -0.1), which fires on any transient spike. v2
-          reports fraction of training in conflict, distinguishes
-          early vs late conflict, and provides a nuanced conclusion.
-
-  [FIX 8] Phase analysis variance — v1 reported only mean per phase,
-          masking the bimodal late-stage distribution (values oscillate
-          between +0.64 and -0.99, averaging to -0.03). v2 adds
-          std, min, max, and fraction-negative per phase.
-
-  [FIX 9] Dead code — v1 computed min_ic_bc_idx but never used it.
-          Removed.
-"""
-
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 import numpy as np
 import torch
 import time
@@ -71,70 +8,38 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
-
 from pinn_core import DEVICE, save_results
 from pinn_equations import (
     GenericPINN, train_burgers_pinn, evaluate_burgers,
     load_burgers_reference,
 )
 from plot_utils import savefig, setup_style
-
 setup_style()
-
-# ===================================================================
-# Speed flags
-# ===================================================================
 torch.backends.cudnn.benchmark = True
 torch.set_float32_matmul_precision("medium")
-
-# ===================================================================
-# Config
-# ===================================================================
 N_HIDDEN    = 4
 N_NEURONS   = 64
 N_EPOCHS    = 50000
 TRACK_EVERY = 500
-SEED        = 42                    # FIX 5
-
-# Training weights (from pinn_equations defaults — documented for clarity)
+SEED        = 42
 W_PDE = 1.0
-W_IC  = 10.0   # FIX 4: IC is 10× weighted in the actual training loss
+W_IC  = 10.0
 W_BC  = 1.0
-
-# Conflict detection thresholds
-CONFLICT_THRESHOLD = -0.1   # cosine below this = "conflict"
-SUSTAINED_WINDOW   = 3      # must be negative for this many consecutive measurements
-
+CONFLICT_THRESHOLD = -0.1
+SUSTAINED_WINDOW   = 3
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "results" / "exp6"
-
-
 def cosine_sim(v1, v2):
-    """Cosine similarity between two vectors."""
     dot = (v1 * v2).sum()
     n1 = v1.norm()
     n2 = v2.norm()
     return (dot / (n1 * n2 + 1e-30)).item()
-
-
-# ===================================================================
-# FIX 7 — Nuanced conflict analysis
-# ===================================================================
-
 def analyse_conflict_phases(epochs, cos_arr, threshold=CONFLICT_THRESHOLD):
-    """
-    Compute per-phase statistics with variance and conflict fraction.
-
-    Returns dict with early/mid/late phases, each containing:
-      mean, std, min, max, fraction_negative, fraction_below_threshold,
-      n_samples, epoch_range
-    """
     n = len(epochs)
     phase_slices = {
         "early": slice(0, n // 5),
         "mid":   slice(n // 5, 3 * n // 5),
         "late":  slice(3 * n // 5, n),
     }
-
     result = {}
     for phase_name, sl in phase_slices.items():
         arr = cos_arr[sl]
@@ -150,44 +55,28 @@ def analyse_conflict_phases(epochs, cos_arr, threshold=CONFLICT_THRESHOLD):
             "epoch_range":              [ep[0], ep[-1]],
         }
     return result, phase_slices
-
-
 def detect_conflict_reemergence(epochs, cos_arr,
                                  threshold=CONFLICT_THRESHOLD,
                                  late_start_frac=0.6):
-    """
-    Detect whether conflict re-emerges in late training after resolving
-    in mid-training.
-
-    Returns dict documenting the re-emergence (or lack thereof).
-    """
     n = len(epochs)
     mid_start = n // 5
     mid_end   = int(3 * n / 5)
     late_start = mid_end
-
     mid_arr  = cos_arr[mid_start:mid_end]
     late_arr = cos_arr[late_start:]
     late_eps = [epochs[i] for i in range(late_start, n)]
-
     mid_mean  = float(np.mean(mid_arr))
     late_neg  = np.where(late_arr < threshold)[0]
-
     if len(late_neg) == 0:
         return {
             "reemergence_detected": False,
             "note": "No conflict re-emergence in late training.",
         }
-
-    # Find the first epoch of re-emergence
     first_idx   = int(late_neg[0])
     first_epoch = late_eps[first_idx]
-
-    # Find the deepest point
     deepest_idx   = int(np.argmin(late_arr))
     deepest_epoch = late_eps[deepest_idx]
     deepest_val   = float(late_arr[deepest_idx])
-
     return {
         "reemergence_detected":      True,
         "first_reemergence_epoch":   first_epoch,
@@ -205,25 +94,12 @@ def detect_conflict_reemergence(epochs, cos_arr,
             f"measurements below threshold {threshold}."
         ),
     }
-
-
-# ===================================================================
-# FIX 3 — Full-range heatmap (4×5 grid, 20 snapshots)
-# ===================================================================
-
 def plot_heatmaps_full(epochs, cos_pde_ic, cos_pde_bc, cos_ic_bc,
                        filepath):
-    """
-    Plot 4×5 grid of cosine similarity matrices spanning the full
-    training range. v1 only showed 10 snapshots (epochs 0–23000),
-    completely missing late-stage conflict re-emergence.
-    """
     n_snapshots = 20
     indices = np.linspace(0, len(epochs) - 1, n_snapshots, dtype=int)
-
     fig, axes = plt.subplots(4, 5, figsize=(22, 16))
     axes_flat = axes.flatten()
-
     for plot_idx, si in enumerate(indices):
         ax = axes_flat[plot_idx]
         mat = np.array([
@@ -236,13 +112,10 @@ def plot_heatmaps_full(epochs, cos_pde_ic, cos_pde_bc, cos_ic_bc,
                     xticklabels=["PDE", "IC", "BC"],
                     yticklabels=["PDE", "IC", "BC"],
                     cbar=False, linewidths=0.5)
-
         ep = epochs[si]
-        # Highlight late-conflict snapshots
         title_color = "red" if cos_pde_ic[si] < CONFLICT_THRESHOLD else "black"
         ax.set_title(f"Epoch {ep}", fontsize=9, color=title_color,
                      fontweight="bold" if title_color == "red" else "normal")
-
     fig.suptitle(
         "Gradient Cosine Similarity Matrices Over Training  [v2 — full range]\n"
         "Red titles = PDE-IC conflict detected (cos < −0.1)",
@@ -250,45 +123,27 @@ def plot_heatmaps_full(epochs, cos_pde_ic, cos_pde_bc, cos_ic_bc,
     plt.tight_layout()
     savefig(fig, filepath)
     print(f"  Heatmap grid saved: {filepath}")
-
-
-# ===================================================================
-# FIX 2 — Time-series plot with late-conflict annotation
-# ===================================================================
-
 def plot_cosine_timeseries(epochs, cos_pde_ic, cos_pde_bc, cos_ic_bc,
                            peak_epoch, reemergence_info, filepath):
-    """
-    Cosine similarity over time with annotated early and late conflict
-    regions. v1 only annotated peak conflict.
-    """
     fig, ax = plt.subplots(figsize=(14, 6))
-
     ax.plot(epochs, cos_pde_ic, "-", color="#D32F2F", linewidth=1.5,
             label="cos(∇PDE, ∇IC)", alpha=0.85)
     ax.plot(epochs, cos_pde_bc, "-", color="#1565C0", linewidth=1.5,
             label="cos(∇PDE, ∇BC)", alpha=0.85)
     ax.plot(epochs, cos_ic_bc, "-", color="#2E7D32", linewidth=1.5,
             label="cos(∇IC, ∇BC)", alpha=0.85)
-
     ax.axhline(0, color="black", linestyle="--", alpha=0.4)
     ax.axhline(CONFLICT_THRESHOLD, color="gray", linestyle=":",
                alpha=0.4, label=f"Conflict threshold ({CONFLICT_THRESHOLD})")
     ax.fill_between(epochs, -1, CONFLICT_THRESHOLD,
                     alpha=0.04, color="red", label="Conflict zone")
-
-    # Peak conflict marker
     ax.axvline(peak_epoch, color="#FF6F00", linestyle="--", linewidth=2,
                alpha=0.7, label=f"Peak conflict (epoch {peak_epoch})")
-
-    # FIX 2: Annotate late-stage re-emergence
     if reemergence_info["reemergence_detected"]:
         re_epoch = reemergence_info["first_reemergence_epoch"]
         ax.axvline(re_epoch, color="#6A1B9A", linestyle="--",
                    linewidth=1.5, alpha=0.7,
                    label=f"Late re-emergence (epoch {re_epoch})")
-
-        # Shade the late-conflict region
         deep_ep = reemergence_info["deepest_reemergence_epoch"]
         deep_val = reemergence_info["deepest_reemergence_value"]
         ax.annotate(
@@ -302,7 +157,6 @@ def plot_cosine_timeseries(epochs, cos_pde_ic, cos_pde_bc, cos_ic_bc,
             bbox=dict(boxstyle="round,pad=0.3", facecolor="#F3E5F5",
                       edgecolor="#6A1B9A", alpha=0.9),
         )
-
     ax.set_xlabel("Training Iteration", fontsize=12)
     ax.set_ylabel("Cosine Similarity", fontsize=12)
     ax.set_title(
@@ -316,30 +170,16 @@ def plot_cosine_timeseries(epochs, cos_pde_ic, cos_pde_bc, cos_ic_bc,
     plt.tight_layout()
     savefig(fig, filepath)
     print(f"  Time-series saved: {filepath}")
-
-
-# ===================================================================
-# FIX 8 — Conflict analysis with variance and fraction bars
-# ===================================================================
-
 def plot_conflict_analysis(epochs, cos_pde_ic, cos_pde_bc, cos_ic_bc,
                            phase_slices, filepath):
-    """
-    Three-column phase analysis with error bars and fraction-negative
-    sub-bars. v1 showed only means, masking bimodal late-stage behavior.
-    """
     fig, axes = plt.subplots(2, 3, figsize=(16, 10),
                              gridspec_kw={"height_ratios": [3, 2]})
-
     pairs = [("PDE-IC", cos_pde_ic, "#D32F2F"),
              ("PDE-BC", cos_pde_bc, "#1565C0"),
              ("IC-BC",  cos_ic_bc,  "#2E7D32")]
-
     phase_names  = ["Early\n(0–20%)", "Mid\n(20–60%)", "Late\n(60–100%)"]
     phase_keys   = ["early", "mid", "late"]
-
     for col, (name, data, color) in enumerate(pairs):
-        # Top row: mean ± std
         ax = axes[0, col]
         means, stds, mins, maxs = [], [], [], []
         for pk in phase_keys:
@@ -349,7 +189,6 @@ def plot_conflict_analysis(epochs, cos_pde_ic, cos_pde_bc, cos_ic_bc,
             stds.append(float(np.std(arr)))
             mins.append(float(np.min(arr)))
             maxs.append(float(np.max(arr)))
-
         x = np.arange(3)
         bars = ax.bar(x, means, color=color, alpha=0.75, yerr=stds,
                       capsize=6, error_kw={"linewidth": 1.5})
@@ -362,33 +201,26 @@ def plot_conflict_analysis(epochs, cos_pde_ic, cos_pde_bc, cos_ic_bc,
         ax.set_title(f"{name} Gradient Alignment\n(mean ± std)",
                      fontweight="bold", fontsize=11)
         ax.set_ylim(-1.2, 1.2)
-
-        # Annotate mean ± std
         for i, (m, s) in enumerate(zip(means, stds)):
             y_pos = m + s + 0.05 if m >= 0 else m - s - 0.05
             va = "bottom" if m >= 0 else "top"
             ax.text(i, y_pos, f"{m:.3f}±{s:.2f}",
                     ha="center", va=va, fontsize=8, fontweight="bold")
-
-        # Bottom row: fraction of measurements below threshold
         ax2 = axes[1, col]
         fracs = []
         for pk in phase_keys:
             sl = phase_slices[pk]
             arr = data[sl]
             fracs.append(float(np.mean(arr < CONFLICT_THRESHOLD)))
-
         bars2 = ax2.bar(x, fracs, color=color, alpha=0.6)
         ax2.set_xticks(x)
         ax2.set_xticklabels(phase_names, fontsize=10)
         ax2.set_ylabel(f"Fraction below {CONFLICT_THRESHOLD}", fontsize=10)
         ax2.set_ylim(0, 1.05)
         ax2.set_title(f"{name}: Conflict Fraction", fontsize=10)
-
         for i, f in enumerate(fracs):
             ax2.text(i, f + 0.02, f"{f:.0%}", ha="center", va="bottom",
                      fontsize=10, fontweight="bold")
-
     fig.suptitle(
         "Gradient Conflict Phase Analysis  [v2 — with variance & conflict fraction]\n"
         "Late-stage PDE-IC mean ≈ 0 masks bimodal distribution "
@@ -397,12 +229,6 @@ def plot_conflict_analysis(epochs, cos_pde_ic, cos_pde_bc, cos_ic_bc,
     plt.tight_layout()
     savefig(fig, filepath)
     print(f"  Conflict analysis saved: {filepath}")
-
-
-# ===================================================================
-# Main experiment
-# ===================================================================
-
 def run_experiment():
     print("=" * 70)
     print("EXP 6: Gradient Flow & Conflict Analysis  [v2 — journal-ready]")
@@ -414,40 +240,27 @@ def run_experiment():
           f"gradients")
     print("=" * 70)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-    # FIX 5: set seeds for reproducibility
     torch.manual_seed(SEED)
     np.random.seed(SEED)
-
-    # Train with gradient tracking
     model = GenericPINN(in_dim=2, out_dim=1, n_hidden=N_HIDDEN,
                         n_neurons=N_NEURONS, activation="tanh")
-
     t0 = time.time()
     train_out = train_burgers_pinn(
         model, n_epochs=N_EPOCHS, gradient_tracking=True,
         track_every=TRACK_EVERY, log_every=5000,
     )
     training_time = time.time() - t0
-
     records = train_out["gradient_records"]
-
-    # Evaluate
     try:
         x_ref, t_ref, u_ref = load_burgers_reference()
         _, l2 = evaluate_burgers(model, x_ref, t_ref, u_ref)
         print(f"  Final L2 error: {l2:.6f}")
     except FileNotFoundError:
         l2 = float("nan")
-
-    # ------------------------------------------------------------------
-    # Compute pairwise cosine similarities
-    # ------------------------------------------------------------------
     epochs = [r["epoch"] for r in records]
     cos_pde_ic = []
     cos_pde_bc = []
     cos_ic_bc  = []
-
     for r in records:
         g_pde = r["pde_grad_vec"]
         g_ic  = r["ic_grad_vec"]
@@ -455,53 +268,36 @@ def run_experiment():
         cos_pde_ic.append(cosine_sim(g_pde, g_ic))
         cos_pde_bc.append(cosine_sim(g_pde, g_bc))
         cos_ic_bc.append(cosine_sim(g_ic, g_bc))
-
     cos_pde_ic = np.array(cos_pde_ic)
     cos_pde_bc = np.array(cos_pde_bc)
     cos_ic_bc  = np.array(cos_ic_bc)
-
-    # ------------------------------------------------------------------
-    # FIX 1 — Peak conflict with CORRECT cross-references
-    # ------------------------------------------------------------------
     min_pde_ic_idx   = int(np.argmin(cos_pde_ic))
     peak_epoch       = epochs[min_pde_ic_idx]
     peak_pde_ic      = float(cos_pde_ic[min_pde_ic_idx])
-    # Report ALL values at the SAME epoch (not argmin of each separately)
     peak_pde_bc      = float(cos_pde_bc[min_pde_ic_idx])
     peak_ic_bc       = float(cos_ic_bc[min_pde_ic_idx])
-
     print(f"\n  Peak PDE-IC conflict: epoch {peak_epoch}")
     print(f"    cos(PDE,IC) = {peak_pde_ic:.4f}")
     print(f"    cos(PDE,BC) = {peak_pde_bc:.4f}  (at same epoch)")
     print(f"    cos(IC,BC)  = {peak_ic_bc:.4f}   (at same epoch)")
-
-    # ------------------------------------------------------------------
-    # FIX 7 — Nuanced conflict analysis
-    # ------------------------------------------------------------------
     n = len(epochs)
     total_in_conflict = int(np.sum(cos_pde_ic < CONFLICT_THRESHOLD))
     conflict_fraction = float(total_in_conflict / n)
     print(f"\n  PDE-IC conflict fraction: {total_in_conflict}/{n} "
           f"({conflict_fraction:.1%})")
-
-    # FIX 8 — Phase analysis with variance
     pde_ic_phases, phase_slices = analyse_conflict_phases(
         epochs, cos_pde_ic, CONFLICT_THRESHOLD)
     pde_bc_phases, _ = analyse_conflict_phases(
         epochs, cos_pde_bc, CONFLICT_THRESHOLD)
     ic_bc_phases, _  = analyse_conflict_phases(
         epochs, cos_ic_bc, CONFLICT_THRESHOLD)
-
     for phase in ["early", "mid", "late"]:
         p = pde_ic_phases[phase]
         print(f"  {phase:>5}: PDE-IC mean={p['mean']:+.3f} ± {p['std']:.3f}  "
               f"[{p['min']:+.3f}, {p['max']:+.3f}]  "
               f"conflict={p['fraction_below_threshold']:.0%}")
-
-    # FIX 2 — Detect late-stage re-emergence
     reemergence = detect_conflict_reemergence(
         epochs, cos_pde_ic, CONFLICT_THRESHOLD)
-
     if reemergence["reemergence_detected"]:
         print(f"\n  ⚠ LATE-STAGE CONFLICT RE-EMERGENCE DETECTED")
         print(f"    First re-emergence: epoch "
@@ -510,12 +306,9 @@ def run_experiment():
               f"at epoch {reemergence['deepest_reemergence_epoch']}")
         print(f"    Late conflict fraction: "
               f"{reemergence['late_conflict_fraction']:.0%}")
-
-    # FIX 7 — Refined hypothesis
     early_conflict = pde_ic_phases["early"]["fraction_below_threshold"] > 0.3
     late_conflict  = reemergence["reemergence_detected"]
     mid_resolved   = pde_ic_phases["mid"]["mean"] > 0.1
-
     hypothesis_result = {
         "early_conflict_present":  early_conflict,
         "mid_phase_resolved":      mid_resolved,
@@ -537,42 +330,25 @@ def run_experiment():
             f"alignment as loss components approach their respective floors."
         ),
     }
-
     print(f"\n  Hypothesis: {hypothesis_result['overall_conclusion']}")
-
-    # ------------------------------------------------------------------
-    # Plots
-    # ------------------------------------------------------------------
     print("\n── Generating plots ──")
-
-    # 1. FIX 2: Time-series with late-conflict annotation
     plot_cosine_timeseries(
         epochs, cos_pde_ic, cos_pde_bc, cos_ic_bc,
         peak_epoch, reemergence,
         filepath=OUTPUT_DIR / "cosine_similarity_over_time.png",
     )
-
-    # 2. FIX 3: Full-range heatmap (4×5 grid)
     plot_heatmaps_full(
         epochs, cos_pde_ic, cos_pde_bc, cos_ic_bc,
         filepath=OUTPUT_DIR / "cosine_similarity_heatmaps.png",
     )
-
-    # 3. FIX 8: Conflict analysis with variance and fraction
     plot_conflict_analysis(
         epochs, cos_pde_ic, cos_pde_bc, cos_ic_bc,
         phase_slices,
         filepath=OUTPUT_DIR / "conflict_analysis.png",
     )
-
-    # ------------------------------------------------------------------
-    # FIX 6 — Complete JSON with all metadata
-    # ------------------------------------------------------------------
     results = {
         "experiment": "Gradient Flow & Conflict Analysis",
         "version":    "v2-journal-ready",
-
-        # FIX 6: full config section
         "config": {
             "n_hidden":       N_HIDDEN,
             "n_neurons":      N_NEURONS,
@@ -584,11 +360,8 @@ def run_experiment():
             "w_bc":           W_BC,
             "conflict_threshold": CONFLICT_THRESHOLD,
         },
-
         "l2_error":       l2,
         "training_time":  training_time,
-
-        # FIX 4: gradient tracking provenance
         "gradient_tracking_note": (
             "Gradient vectors are recorded per-component WITHOUT the "
             "training loss weights applied. The training loss is: "
@@ -602,14 +375,10 @@ def run_experiment():
             "but the direction (and therefore cosine similarity) is "
             "identical since scalar weighting preserves direction."
         ),
-
-        # Raw data
         "epochs_tracked": epochs,
         "cosine_pde_ic":  cos_pde_ic.tolist(),
         "cosine_pde_bc":  cos_pde_bc.tolist(),
         "cosine_ic_bc":   cos_ic_bc.tolist(),
-
-        # FIX 1: corrected peak conflict — all values at same epoch
         "peak_conflict": {
             "epoch":        peak_epoch,
             "cosine_pde_ic": peak_pde_ic,
@@ -624,8 +393,6 @@ def run_experiment():
                 f"{peak_pde_bc:+.4f}."
             ),
         },
-
-        # FIX 7: overall conflict statistics
         "conflict_statistics": {
             "total_measurements":              n,
             "pde_ic_conflict_count":           total_in_conflict,
@@ -633,8 +400,6 @@ def run_experiment():
             "pde_ic_global_mean":              float(np.mean(cos_pde_ic)),
             "pde_ic_global_std":               float(np.std(cos_pde_ic)),
         },
-
-        # FIX 8: phase analysis with full statistics
         "phase_analysis": {
             "pde_ic": pde_ic_phases,
             "pde_bc": pde_bc_phases,
@@ -645,14 +410,8 @@ def run_experiment():
                 "late":  "60–100% of tracked epochs",
             },
         },
-
-        # FIX 2: late-stage re-emergence
         "late_conflict_reemergence": reemergence,
-
-        # FIX 7: refined hypothesis
         "hypothesis_result": hypothesis_result,
-
-        # FIX 6: figure notes
         "figure_notes": {
             "cosine_similarity_over_time": (
                 "Three pairwise cosine similarities over 50k epochs. "
@@ -680,12 +439,7 @@ def run_experiment():
             ),
         },
     }
-
     save_results(results, OUTPUT_DIR / "exp6_results.json")
-
-    # ------------------------------------------------------------------
-    # Summary
-    # ------------------------------------------------------------------
     print(f"\n{'=' * 70}")
     print("EXP 6 — COMPLETE  [v2]")
     print(f"{'=' * 70}")
@@ -699,9 +453,6 @@ def run_experiment():
     print(f"  Hypothesis     : {hypothesis_result['overall_conclusion']}")
     print(f"  Results → {OUTPUT_DIR}")
     print(f"{'=' * 70}")
-
     return results
-
-
 if __name__ == "__main__":
     run_experiment()
