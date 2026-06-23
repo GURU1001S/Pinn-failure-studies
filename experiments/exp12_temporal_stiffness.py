@@ -1,28 +1,3 @@
-"""
-exp12_temporal_stiffness_v3 — Temporal Stiffness / Long-Time Integration
-
-Heat equation with α=0.01:
-  1. Single-domain PINN over [0, 10]
-  2. Sequential time-windowed training: [0,1], [1,2], ..., [9,10]
-     with transfer learning between windows.
-
-Compares error accumulation. Finds:
-  - Whether single-domain / windowed PINN ever catastrophically fails
-  - If it does, at what time
-  - Whether error growth is linear, polynomial, or exponential
-
-Outputs (results/exp12/):
-  - error_over_time.png
-  - solution_snapshots.png
-  - error_growth_fit.png
-  - exp12_results.json
-
-FIX (v2):
-  Previously, catastrophic_time defaulted to T_TOTAL=10.0 even when no
-  failure occurred, making "never failed" indistinguishable from
-  "failed at t=10". This version uses None as the sentinel and guards
-  every print / JSON entry with an explicit did_fail flag.
-"""
 
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -45,33 +20,23 @@ from plot_utils import savefig, setup_style
 
 setup_style()
 
-# ===================================================================
-# Speed flags
-# ===================================================================
 torch.backends.cudnn.benchmark = True
 torch.set_float32_matmul_precision("medium")
 
-# ===================================================================
-# Config
-# ===================================================================
 ALPHA = 0.01
 T_TOTAL = 10.0
 N_WINDOWS = 10
-WINDOW_SIZE = T_TOTAL / N_WINDOWS          # 1.0
+WINDOW_SIZE = T_TOTAL / N_WINDOWS       
 
 N_HIDDEN = 4
 N_NEURONS = 64
 EPOCHS_SINGLE = 30000
 EPOCHS_PER_WINDOW = 5000
 
-CATASTROPHIC_THRESHOLD = 0.5              # L2 above this → catastrophic
+CATASTROPHIC_THRESHOLD = 0.5       
 
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "results" / "exp12"
 
-
-# ===================================================================
-# Helpers
-# ===================================================================
 
 def evaluate_at_times(model, alpha, times, nx=200, x_range=HEAT_X_RANGE):
     """Return list of L2 relative errors at each requested time slice."""
@@ -91,14 +56,7 @@ def evaluate_at_times(model, alpha, times, nx=200, x_range=HEAT_X_RANGE):
 
 
 def find_catastrophic_time(eval_times, errors, threshold):
-    """
-    Return (did_fail: bool, t_fail: float | None).
 
-    did_fail = True  → first time at which error > threshold
-    did_fail = False → error never exceeded threshold; t_fail = None
-
-    Using None as the sentinel eliminates the T_TOTAL ambiguity.
-    """
     for t, e in zip(eval_times, errors):
         if e > threshold:
             return True, float(t)
@@ -106,7 +64,7 @@ def find_catastrophic_time(eval_times, errors, threshold):
 
 
 def fit_error_growth(times, errors):
-    """Fit error growth to linear, polynomial, exponential models."""
+
     times  = np.array(times)
     errors = np.array(errors)
     mask   = (errors > 1e-10) & np.isfinite(errors)
@@ -118,7 +76,7 @@ def fit_error_growth(times, errors):
 
     fits = {}
 
-    # Linear
+
     try:
         def linear(t, a, b): return a * t + b
         popt, _ = curve_fit(linear, t_fit, e_fit,
@@ -131,7 +89,6 @@ def fit_error_growth(times, errors):
     except Exception:
         fits["linear"] = {"r2": -1.0}
 
-    # Polynomial (degree 2)
     try:
         def poly(t, a, b, c): return a * t**2 + b * t + c
         popt, _ = curve_fit(poly, t_fit, e_fit,
@@ -144,7 +101,6 @@ def fit_error_growth(times, errors):
     except Exception:
         fits["polynomial"] = {"r2": -1.0}
 
-    # Exponential
     try:
         def exponential(t, a, b): return a * np.exp(b * t)
         popt, _ = curve_fit(exponential, t_fit, e_fit,
@@ -160,10 +116,6 @@ def fit_error_growth(times, errors):
     best = max(fits, key=lambda k: fits[k]["r2"])
     return best, fits
 
-
-# ===================================================================
-# Training routines
-# ===================================================================
 
 def train_single_domain(ckpt=None, ckpt_path=None, model_path=None):
     print("\n  Single-domain training [0, 10]...")
@@ -226,7 +178,7 @@ def train_windowed(ckpt=None, ckpt_path=None, model_path=None):
                                t_range=(t_start, t_end))
 
         if w > 0:
-            # Use exact IC at t_start (best-case transfer)
+  
             x_ic_np = np.linspace(HEAT_X_RANGE[0], HEAT_X_RANGE[1], 200)
             x_ic = torch.tensor(x_ic_np[:, None], dtype=DTYPE,
                                 device=DEVICE).requires_grad_(True)
@@ -253,7 +205,6 @@ def train_windowed(ckpt=None, ckpt_path=None, model_path=None):
         all_loss.extend(window_loss)
         print(f"      Final loss: {window_loss[-1]:.4e}")
 
-        # Checkpoint after each window
         if model_path:
             torch.save(model.state_dict(), model_path)
         if ckpt is not None and ckpt_path:
@@ -266,9 +217,6 @@ def train_windowed(ckpt=None, ckpt_path=None, model_path=None):
     return model, all_loss
 
 
-# ===================================================================
-# Main experiment
-# ===================================================================
 
 def run_experiment():
     print("=" * 70)
@@ -281,9 +229,6 @@ def run_experiment():
 
     eval_times = np.linspace(0.5, T_TOTAL, 20)
 
-    # ------------------------------------------------------------------
-    # Checkpoint setup
-    # ------------------------------------------------------------------
     import json
     ckpt_path = OUTPUT_DIR / "exp12_checkpoint.json"
     model_single_path = OUTPUT_DIR / "model_single.pt"
@@ -297,24 +242,19 @@ def run_experiment():
         except Exception:
             pass
 
-    # ------------------------------------------------------------------
-    # Train
-    # ------------------------------------------------------------------
     model_single,   loss_single   = train_single_domain(ckpt, ckpt_path, model_single_path)
     model_windowed, loss_windowed = train_windowed(ckpt, ckpt_path, model_windowed_path)
 
     errors_single   = evaluate_at_times(model_single,   ALPHA, eval_times)
     errors_windowed = evaluate_at_times(model_windowed, ALPHA, eval_times)
 
-    # ------------------------------------------------------------------
-    # Catastrophic failure detection  (None = never failed)
-    # ------------------------------------------------------------------
+
     failed_single,   t_fail_single   = find_catastrophic_time(
         eval_times, errors_single,   CATASTROPHIC_THRESHOLD)
     failed_windowed, t_fail_windowed = find_catastrophic_time(
         eval_times, errors_windowed, CATASTROPHIC_THRESHOLD)
 
-    # Unambiguous terminal reporting
+
     print("\n  ── Catastrophic failure summary ──")
     if failed_single:
         print(f"  Single-domain : FAILED  at t = {t_fail_single:.2f}  "
@@ -332,9 +272,7 @@ def run_experiment():
         print(f"  Windowed      : NO FAILURE  "
               f"(peak L2 = {peak_w:.6f}, threshold = {CATASTROPHIC_THRESHOLD})")
 
-    # ------------------------------------------------------------------
-    # Error growth fits
-    # ------------------------------------------------------------------
+
     best_fit_single,   fits_single   = fit_error_growth(eval_times, errors_single)
     best_fit_windowed, fits_windowed = fit_error_growth(eval_times, errors_windowed)
 
@@ -343,12 +281,8 @@ def run_experiment():
     print(f"  Windowed error growth      : {best_fit_windowed}  "
           f"(R²={fits_windowed.get(best_fit_windowed, {}).get('r2', 0):.4f})")
 
-    # ------------------------------------------------------------------
-    # Plots
-    # ------------------------------------------------------------------
     print("\n── Generating plots ──")
 
-    # 1. Error over time
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.semilogy(eval_times, errors_single, "o-",
                 color="#D32F2F", linewidth=2, markersize=7,
@@ -360,7 +294,6 @@ def run_experiment():
                linewidth=2, alpha=0.7,
                label=f"Catastrophic threshold ({CATASTROPHIC_THRESHOLD})")
 
-    # Mark actual failure times only if failure really occurred
     if failed_single:
         ax.axvline(t_fail_single, color="#D32F2F", linestyle=":",
                    alpha=0.6, label=f"Single fails at t={t_fail_single:.2f}")
@@ -368,7 +301,7 @@ def run_experiment():
         ax.axvline(t_fail_windowed, color="#1565C0", linestyle=":",
                    alpha=0.6, label=f"Windowed fails at t={t_fail_windowed:.2f}")
 
-    # Annotate no-failure cases directly on plot
+ 
     if not failed_single:
         ax.annotate("No catastrophic\nfailure (single)",
                     xy=(eval_times[-1], errors_single[-1]),
@@ -388,7 +321,6 @@ def run_experiment():
     ax.legend(fontsize=9)
     savefig(fig, OUTPUT_DIR / "error_over_time.png")
 
-    # 2. Solution snapshots
     snapshot_times = [0.5, 2.0, 5.0, 8.0, T_TOTAL]
     x = np.linspace(HEAT_X_RANGE[0], HEAT_X_RANGE[1], 200)
     fig, axes = plt.subplots(2, len(snapshot_times),
@@ -423,7 +355,6 @@ def run_experiment():
     plt.tight_layout()
     savefig(fig, OUTPUT_DIR / "solution_snapshots.png")
 
-    # 3. Error growth fit
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
     for ax, errors, label, fits, best_fit, color in [
         (axes[0], errors_single,   "Single Domain", fits_single,
@@ -459,9 +390,6 @@ def run_experiment():
     fig.suptitle("Error Growth Characterization", fontweight="bold", fontsize=14)
     savefig(fig, OUTPUT_DIR / "error_growth_fit.png")
 
-    # ------------------------------------------------------------------
-    # Save JSON  (None is JSON-safe as null; explicit did_fail flags)
-    # ------------------------------------------------------------------
     results = {
         "experiment":   "Temporal Stiffness / Long-Time Integration",
         "version":      "v2-fixed",
@@ -471,12 +399,11 @@ def run_experiment():
         "errors_single":   errors_single,
         "errors_windowed": errors_windowed,
 
-        # ---- failure fields: explicit bool + nullable time ----
         "single_domain_failed":        failed_single,
-        "catastrophic_time_single":    t_fail_single,    # None if no failure
+        "catastrophic_time_single":    t_fail_single,   
         "windowed_failed":             failed_windowed,
-        "catastrophic_time_windowed":  t_fail_windowed,  # None if no failure
-        # -------------------------------------------------------
+        "catastrophic_time_windowed":  t_fail_windowed,  
+    
 
         "error_growth_single":   best_fit_single,
         "error_growth_windowed": best_fit_windowed,
